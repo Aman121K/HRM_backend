@@ -17,7 +17,7 @@ export class PeopleController {
   }
   @Get("employees")
   @ApiOperation({ summary: "Tenant employee directory" })
-  list(@Req() request: FastifyRequest, @Query("search") search = "", @Query("limit") limit = "50") {
-    return this.people.list(request.identity!, search, Number(limit));
+  list(@Req() request: FastifyRequest, @Query("search") search = "", @Query("limit") limit = "50", @Query("offset") offset = "0") {
+    return this.people.list(request.identity!, search, Number(limit), Number(offset));
   }
 }

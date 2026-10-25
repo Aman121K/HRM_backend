@@ -532,3 +532,18 @@ test("MISC-1 state resolution, LOP proration, fiscal-year helpers, ruleset summa
   assert.equal(RULESET.pf.wageCeiling, 25000);
   assert.equal(RULESET.pf.epsMax, 2083);
 });
+
+test("missing UAN / ESI IP number are flagged so PF and ESI returns aren't filed with blank IDs", () => {
+  const low = { ...baseContext(240000, "NEW"), period: "2026-10" };
+  const flagged = calculateLine({ ...low, profile: { ...low.profile, hasUan: false, hasEsiNumber: false } });
+  assert.ok(flagged.included);
+  const codes = flagged.flags.map((flag) => flag.code);
+  assert.ok(codes.includes("MISSING_UAN"));
+  assert.ok(codes.includes("MISSING_ESI_IP"), "₹20k/month is ESI-covered");
+  const clean = calculateLine({ ...low, profile: { ...low.profile, hasUan: true, hasEsiNumber: true } });
+  assert.ok(!clean.flags.some((flag) => flag.code === "MISSING_UAN" || flag.code === "MISSING_ESI_IP"));
+  const unknown = calculateLine(low);
+  assert.ok(!unknown.flags.some((flag) => flag.code === "MISSING_UAN"), "no flag when the caller doesn't know");
+  const high = calculateLine({ ...baseContext(1200000, "NEW"), period: "2026-10", profile: { ...baseContext(1200000, "NEW").profile, hasEsiNumber: false } });
+  assert.ok(!high.flags.some((flag) => flag.code === "MISSING_ESI_IP"), "₹1L/month is not ESI-covered");
+});

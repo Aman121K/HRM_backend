@@ -1,5 +1,5 @@
 // Receipt OCR providers behind one interface:
-//  - anthropic  (ANTHROPIC_API_KEY set): Claude vision + structured JSON output; model ANTHROPIC_OCR_MODEL (default claude-haiku-4-5).
+//  - anthropic  (ANTHROPIC_API_KEY set): Claude vision + structured JSON output; model ANTHROPIC_OCR_MODEL (default claude-haiku-5-5).
 //  - tesseract  (offline default for images): tesseract.js with English traineddata cached under .data/ocr.
 //  - pdf-text   (PDFs with a text layer): pdf-parse; image-only PDFs return a warning asking for a photo.
 // tesseract and pdf-text feed their text through the Indian receipt parser (receipt-parser.ts).
@@ -14,7 +14,7 @@ export type OcrProviderName = "tesseract" | "anthropic" | "pdf-text";
 export type OcrResult = { provider: OcrProviderName; confidence: number; fields: ReceiptFields; lines: ReceiptLine[]; warnings: string[]; rawText: string | null };
 
 const round3 = (value: number) => Math.round(Math.max(0, Math.min(1, value)) * 1000) / 1000;
-const DEFAULT_ANTHROPIC_MODEL = "claude-haiku-4-5";
+const DEFAULT_ANTHROPIC_MODEL = "claude-haiku-5-5";
 
 // ---- tesseract --------------------------------------------------------------------------------------------------------
 
@@ -142,7 +142,9 @@ export class AnthropicOcr {
       max_tokens: 4000,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: [source, { type: "text", text: "Extract the receipt fields." }] }],
-      output_config: { format: { type: "json_schema", schema: RECEIPT_SCHEMA as unknown as Record<string, unknown> } },
+      // Haiku 5.5 thinks by default (adaptive, effort "medium"); reading one receipt doesn't need deep reasoning, and low effort
+      // keeps latency/cost down and leaves max_tokens for the JSON.
+      output_config: { effort: "low", format: { type: "json_schema", schema: RECEIPT_SCHEMA as unknown as Record<string, unknown> } },
     });
     if (response.stop_reason === "refusal") throw new Error("the model declined to read this document");
     if (response.stop_reason === "max_tokens") throw new Error("the model response was cut off");

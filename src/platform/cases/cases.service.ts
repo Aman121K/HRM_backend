@@ -89,15 +89,28 @@ export class CasesService implements OnModuleInit {
   async inbox(identity: AuthIdentity) {
     const enabled = await this.enabledModules(identity);
     return this.database.tenantTransaction(identity, async (client) => {
-      const rows = (await client.query(
-        `${SELECT_CASE} WHERE c.organization_id=$1 AND c.closed_at IS NULL AND c.module = ANY($4)
-            AND ($3 OR c.approver_id=$2 OR c.assignee_id=$2 OR c.requester_id=$2)
-          ORDER BY c.due_at NULLS LAST, c.created_at LIMIT 500`,
-        [identity.organizationId, identity.employeeId, this.isHr(identity), enabled])).rows;
-      const items = rows.map((row) => this.present(identity, row)).filter((item) => item.actions.some((action) => !action.optional));
+      // Whether a case needs this person comes from the module's state machine (present()), so open cases are scanned in
+      // pages. Counts cover every scanned case; the list returns the first INBOX_LIMIT actionable ones (oldest due first).
+      const INBOX_LIMIT = 500, PAGE = 500, MAX_SCANNED = 20_000;
+      const items: ReturnType<CasesService["present"]>[] = [];
       const byModule: Record<string, number> = {};
-      for (const item of items) byModule[item.module] = (byModule[item.module] || 0) + 1;
-      return { items, byModule, total: items.length };
+      let total = 0;
+      for (let offset = 0; offset < MAX_SCANNED; offset += PAGE) {
+        const rows = (await client.query(
+          `${SELECT_CASE} WHERE c.organization_id=$1 AND c.closed_at IS NULL AND c.module = ANY($4)
+              AND ($3 OR c.approver_id=$2 OR c.assignee_id=$2 OR c.requester_id=$2)
+            ORDER BY c.due_at NULLS LAST, c.created_at, c.id LIMIT $5 OFFSET $6`,
+          [identity.organizationId, identity.employeeId, this.isHr(identity), enabled, PAGE, offset])).rows;
+        for (const row of rows) {
+          const item = this.present(identity, row);
+          if (!item.actions.some((action) => !action.optional)) continue;
+          total += 1;
+          byModule[item.module] = (byModule[item.module] || 0) + 1;
+          if (items.length < INBOX_LIMIT) items.push(item);
+        }
+        if (rows.length < PAGE) break;
+      }
+      return { items, byModule, total, truncated: total > items.length };
     });
   }
 

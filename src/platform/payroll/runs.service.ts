@@ -155,9 +155,14 @@ export class RunsService {
     const p = parsePeriod(run.period);
     const expensesAdded = run.include_expenses ? await this.syncExpenses(client, identity, run, p.lastDay) : 0;
 
+    // Owners who have never had a salary structure (e.g. a group owner added to a brand to administer it) are not on
+    // this brand's payroll, so they are left out instead of showing up as a "missing structure" error every month.
     const employees = (await client.query(
       `SELECT e.id, e.employee_number, e.full_name, e.department, e.designation, e.location, to_char(e.joining_date,'YYYY-MM-DD') AS joining_date
-         FROM employees e WHERE e.organization_id=$1 AND e.status='ACTIVE' AND e.joining_date <= $2 ORDER BY e.employee_number`, [org, p.lastDay])).rows;
+         FROM employees e WHERE e.organization_id=$1 AND e.status='ACTIVE' AND e.joining_date <= $2
+          AND NOT (EXISTS (SELECT 1 FROM organization_memberships m WHERE m.organization_id=e.organization_id AND m.user_id=e.user_id AND m.role='OWNER')
+                   AND NOT EXISTS (SELECT 1 FROM salary_structures s WHERE s.organization_id=e.organization_id AND s.employee_id=e.id))
+        ORDER BY e.employee_number`, [org, p.lastDay])).rows;
     const ids = employees.map((row) => row.id);
     const byEmployee = <T>(rows: T[], key: (row: T) => string) => { const map = new Map<string, T[]>(); for (const row of rows) { const k = key(row); map.set(k, [...(map.get(k) || []), row]); } return map; };
 
@@ -222,6 +227,7 @@ export class RunsService {
         structure: structure ? { components: structure.components, fixedMonthlyGross: structure.fixed_monthly_gross, isMetro: structure.is_metro } : null,
         profile: { regime: profile.taxRegime, pfApplicable: profile.pfApplicable, ptCategory: profile.ptCategory, state: state.state, stateSource: state.source,
           declarations: profile.declarations, hasPan: Boolean(profile.pan), hasBank: Boolean(profile.bankAccount && profile.ifsc),
+          hasUan: Boolean(profile.uan), hasEsiNumber: Boolean(profile.esiNumber),
           epsEligible: statFlags.epsEligible, disabled: statFlags.disabled, vpfRate: statFlags.vpfRate, internationalWorker: statFlags.internationalWorker,
           ageCategory: profile.declarations.ageCategory || statFlags.ageCategory },
         settings: { pfWageMode: settings.pfWageMode, labourCodeWages: settings.labourCodeWages, lwfEnabled: settings.lwfEnabled, minimumWageMonthly: settings.minimumWageMonthly },

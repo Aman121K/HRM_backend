@@ -61,6 +61,17 @@ items for CA review: `docs/payroll-statutory-review.md`.
 Fuller employee data (date of birth, PAN/UAN, bank, salary, leave balances, year-to-date payroll) comes in through the
 switch-over checklist at `/hris/import/switch-over`.
 
+**Before the first payroll run** each brand needs:
+- **Two admins for payroll.** Runs are maker-checker: the person who calculates or submits a run can't approve it, so add
+  a second HR / payroll admin or an owner (super admin → Edit → Administrators).
+- **A payroll admin or owner to release salaries.** Only they can download the bank transfer file; HR admins can't.
+- **Salary structures** (Payroll → Salary structures, or the switch-over salary import) starting on or after each
+  person's joining date — HR can correct a joining date in Employees → Edit.
+- **PAN, UAN, ESI IP number and bank details** per employee. A run flags `MISSING_BANK`, `MISSING_UAN` and
+  `MISSING_ESI_IP` so PF/ESI returns are never filed with blank IDs.
+- **Deductor details** (TAN, PAN, address, responsible person) under Payroll → Statutory returns before Form 138 /
+  Form 130 can be generated.
+
 ## Application backend
 
 All features run on the v2 platform API (NestJS + Fastify, PostgreSQL with row-level security per brand) under

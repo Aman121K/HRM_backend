@@ -12,7 +12,7 @@ function fakeClient(reply: unknown, seen: { body?: Record<string, unknown> }) {
   return new Anthropic({ apiKey: "test-key", fetch: fetch as unknown as typeof globalThis.fetch, maxRetries: 0 });
 }
 const message = (text: string, stop = "end_turn") => ({
-  id: "msg_1", type: "message", role: "assistant", model: "claude-haiku-4-5", stop_reason: stop, stop_sequence: null,
+  id: "msg_1", type: "message", role: "assistant", model: "claude-haiku-5-5", stop_reason: stop, stop_sequence: null,
   content: [{ type: "text", text }], usage: { input_tokens: 10, output_tokens: 10 },
 });
 
@@ -21,10 +21,11 @@ test("sends the image with a JSON schema and maps the structured reply", async (
   const reply = { merchant: "Third Wave Coffee", date: "2026-09-23", total: 395, currency: "INR", tax: null, gstin: "29AAACT1234A1Z5",
     invoiceNumber: "A-1182", category: "Meals", lines: [{ description: "Cappuccino", amount: 210 }], confidence: 0.93, warnings: [] };
   const result = await new AnthropicOcr(fakeClient(message(JSON.stringify(reply)), seen)).scan(Buffer.from("fake-png"), "image/png");
-  assert.equal(seen.body?.model, process.env.ANTHROPIC_OCR_MODEL || "claude-haiku-4-5");
+  assert.equal(seen.body?.model, process.env.ANTHROPIC_OCR_MODEL || "claude-haiku-5-5");
   const format = (seen.body?.output_config as { format: { type: string; schema: { required: string[] } } }).format;
   assert.equal(format.type, "json_schema");
   assert.ok(format.schema.required.includes("total"));
+  assert.equal((seen.body?.output_config as { effort?: string }).effort, "low");
   const content = (seen.body?.messages as { content: { type: string; source?: { media_type: string } }[] }[])[0].content;
   assert.equal(content[0].type, "image");
   assert.equal(content[0].source?.media_type, "image/png");

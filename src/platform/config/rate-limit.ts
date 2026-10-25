@@ -13,7 +13,9 @@ export const LIMIT_TIERS: [string[], number][] = [
   [["/api/v2/auth/config", "/api/v2/auth/brand/", "/api/v2/health"], Number(process.env.RATE_LIMIT_PUBLIC || 600)],
   [["/iclock", "/api/v2/integrations/devices/", "/api/v2/integrations/payouts/webhook"], Number(process.env.RATE_LIMIT_DEVICES || 1200)],
 ];
-export const IP_CEILING = Number(process.env.RATE_LIMIT_IP_CEILING || 6000);
+// Backstop per client IP. Whole offices share one NAT address (a 1,000-person café chain HQ can make ~6k calls in a
+// morning minute), and each signed-in person also has their own limit, so the IP ceiling is generous by default.
+export const IP_CEILING = Number(process.env.RATE_LIMIT_IP_CEILING || 30000);
 
 type LimitedRequest = { ip: string; url: string; method?: string; routeOptions?: { url?: string } };
 

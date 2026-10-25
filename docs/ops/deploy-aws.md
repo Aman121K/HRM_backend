@@ -283,7 +283,7 @@ Generated from `process.env` usage in `src/platform`, `src` and `mobile/src/conf
 | `DEV_PUSH_PATH`, `DEV_PUSH_SIMCTL`, `DEV_PUSH_SIMCTL_DEVICE` | never in prod | simulator push |
 | `RAZORPAYX_KEY_ID`, `RAZORPAYX_KEY_SECRET`, `RAZORPAYX_ACCOUNT_NUMBER`, `PAYOUTS_DEBIT_ACCOUNT` | for bank payouts | |
 | `PAYOUT_SANDBOX_STEP_SECONDS` | never in prod | sandbox adapter |
-| `RECEIPT_OCR_PROVIDER`, `ANTHROPIC_API_KEY`, `ANTHROPIC_OCR_MODEL`, `OCR_DATA_PATH`, `TESSERACT_LANG_PATH` | optional | receipt OCR; with tesseract on a read-only FS point `OCR_DATA_PATH` at a baked-in or `/tmp` path |
+| `RECEIPT_OCR_PROVIDER`, `ANTHROPIC_API_KEY`, `ANTHROPIC_OCR_MODEL`, `OCR_DATA_PATH`, `TESSERACT_LANG_PATH` | optional | receipt OCR (`ANTHROPIC_OCR_MODEL` defaults to `claude-haiku-5-5`); with tesseract on a read-only FS point `OCR_DATA_PATH` at a baked-in or `/tmp` path |
 | `OPERATOR_TRADE_NAME`, `OPERATOR_PAN`, `OPERATOR_EMAIL`, `OPERATOR_BANK_DETAILS` | for billing invoices | the SaaS operator's details |
 
 ### Web (build args, `Dockerfile.web`)

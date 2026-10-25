@@ -22,6 +22,8 @@ export type LineContext = {
   structure: { components: StructureComponent[]; fixedMonthlyGross: number; isMetro: boolean } | null;
   profile: {
     regime: Regime; pfApplicable: boolean; ptCategory: PtCategory; state: string; stateSource: string; declarations: Declarations; hasPan: boolean; hasBank: boolean;
+    /** UAN / ESI IP number on file (undefined = unknown, no flag). Needed for the PF ECR and ESI return lines. */
+    hasUan?: boolean; hasEsiNumber?: boolean;
     /** Optional statutory flags (default: EPS member, not disabled, no VPF, domestic worker, age < 60). */
     epsEligible?: boolean; disabled?: boolean; vpfRate?: number; internationalWorker?: boolean; ageCategory?: AgeCategory;
   };
@@ -158,6 +160,10 @@ export function calculateLine(ctx: LineContext) {
   }
   if (!ctx.profile.hasBank) flags.push({ code: "MISSING_BANK", tone: "warning", message: "No bank account on file — excluded from the bank transfer file." });
   if (!ctx.profile.hasPan && tds > 0) flags.push({ code: "MISSING_PAN", tone: "warning", message: "PAN missing — s.206AA may require TDS at 20%; collect PAN before publishing." });
+  if (pf.employee > 0 && ctx.profile.hasUan === false)
+    flags.push({ code: "MISSING_UAN", tone: "warning", message: "No UAN on file — the PF ECR line for this employee can't be uploaded to EPFO until the UAN is added (generate one on the EPFO portal for new joiners)." });
+  if (esi.employee > 0 && ctx.profile.hasEsiNumber === false)
+    flags.push({ code: "MISSING_ESI_IP", tone: "warning", message: "Covered by ESI but no ESI IP number on file — register the employee on the ESIC portal and add the IP number before filing the ESI return." });
   if (esi.covered && coverage.reason.startsWith("Covered earlier")) flags.push({ code: "ESI_CONTINUED", tone: "info", message: coverage.reason });
   if (noPanApplied) flags.push({ code: "NO_PAN_TDS", tone: "warning", message: `PAN not furnished — TDS deducted at 20% (₹${tds.toLocaleString("en-IN")}) instead of the slab projection.` });
   const fullPfWage = component("BASIC") + futurePfResult.labourCodeAddBack;

@@ -5,6 +5,8 @@ import type { AuthIdentity } from "../auth/auth.types";
 import { DatabaseService } from "../database/database.service";
 import { MODULE_KEYS, type AddAdminDto, type CreateGroupDto, type CreateOrganizationDto, type PlatformUpdateOrganizationDto, type UpdateBrandingDto } from "./organizations.dto";
 
+/** Brands whose dashboard metrics are read at the same time (tenant pool has 10 connections). */
+const GROUP_METRICS_CONCURRENCY = 4;
 /**
  * Logos are served only when they are raster data URLs. SVG (or anything else stored before the DTO was tightened) can
  * carry script if opened directly, so it is withheld everywhere the API returns a logo; the stored row is left as is.
@@ -210,8 +212,13 @@ export class OrganizationsService {
     const group = groupId ? groups.find((item) => item.id === groupId) : groups[0];
     if (!group) throw new ForbiddenException("You are not an administrator of this group.");
     const orgs = (await this.database.systemQuery(`SELECT ${ORG_COLUMNS} FROM organizations o WHERE o.group_id=$1 AND o.status='ACTIVE' ORDER BY coalesce(o.display_name,o.name)`, [group.id])).rows;
-    const brands: Record<string, unknown>[] = [];
-    for (const org of orgs) brands.push({ ...org, metrics: await this.brandMetrics(org.id) });
+    // Brands are read in parallel (each in its own tenant transaction), a few at a time so a large group can't take
+    // every pooled connection; sequential reads made the dashboard's latency grow linearly with the number of brands.
+    const brands: Record<string, unknown>[] = new Array(orgs.length);
+    let next = 0;
+    await Promise.all(Array.from({ length: Math.min(GROUP_METRICS_CONCURRENCY, orgs.length) }, async () => {
+      for (let index = next++; index < orgs.length; index = next++) brands[index] = { ...orgs[index], metrics: await this.brandMetrics(orgs[index].id) };
+    }));
     const sum = (key: string) => brands.reduce((total, brand) => total + (Number((brand.metrics as Record<string, unknown>)[key]) || 0), 0);
     return {
       group, groups, generatedAt: new Date().toISOString(), brands,
@@ -232,8 +239,11 @@ export class OrganizationsService {
       const people = await metric(`SELECT count(*) FILTER (WHERE status='ACTIVE')::int AS headcount,
           count(*) FILTER (WHERE status='ACTIVE' AND joining_date >= date_trunc('month', now() AT TIME ZONE 'Asia/Kolkata'))::int AS "joinersThisMonth"
         FROM employees WHERE organization_id=$1`, { headcount: 0, joinersThisMonth: 0 });
+      // A range on occurred_at (not a cast of it) so attendance_daily_reporting serves it: cost stays at one day of punches
+      // instead of growing with the brand's whole attendance history.
       const today = await metric(`SELECT count(DISTINCT employee_id)::int AS "presentToday" FROM attendance_events WHERE organization_id=$1 AND event_type='IN'
-          AND (occurred_at AT TIME ZONE 'Asia/Kolkata')::date = (now() AT TIME ZONE 'Asia/Kolkata')::date`, { presentToday: 0 });
+          AND occurred_at >= ((now() AT TIME ZONE 'Asia/Kolkata')::date::timestamp AT TIME ZONE 'Asia/Kolkata')
+          AND occurred_at < (((now() AT TIME ZONE 'Asia/Kolkata')::date + 1)::timestamp AT TIME ZONE 'Asia/Kolkata')`, { presentToday: 0 });
       const cases = await metric(`SELECT count(*) FILTER (WHERE closed_at IS NULL AND module='exit')::int AS "exitsInProgress",
           count(*) FILTER (WHERE closed_at IS NULL AND module='helpdesk')::int AS "openTickets",
           count(*) FILTER (WHERE closed_at IS NULL AND module='helpdesk' AND due_at < now() AND status <> 'RESOLVED')::int AS "overdueTickets",

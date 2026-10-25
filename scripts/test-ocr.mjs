@@ -69,7 +69,7 @@ function makePdf(lines, image = false) {
   objects.push(`<< /Length ${Buffer.byteLength(content)} >>\nstream\n${content}\nendstream`);
   objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
   if (image) objects.push(`<< /Type /XObject /Subtype /Image /Width 2 /Height 2 /ColorSpace /DeviceGray /BitsPerComponent 8 /Length 4 >>\nstream\n\x80\x90\xa0\xb0\nendstream`);
-  let pdf = "%PDF-1.4\n";
+  let pdf = `%PDF-1.4\n%${run}\n`; // per-run comment: a fresh sha256 each run, so earlier runs never trigger duplicate warnings
   const offsets = objects.map((body, index) => { const at = Buffer.byteLength(pdf, "latin1"); pdf += `${index + 1} 0 obj\n${body}\nendobj\n`; return at; });
   const xref = Buffer.byteLength(pdf, "latin1");
   pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.map((o) => `${String(o).padStart(10, "0")} 00000 n \n`).join("")}`;

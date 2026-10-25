@@ -1,5 +1,5 @@
 import { Transform, Type } from "class-transformer";
-import { IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min, MinLength, ValidateIf } from "class-validator";
+import { IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Matches, MaxLength, Min, MinLength, ValidateIf } from "class-validator";
 
 const blankToNull = ({ value }: { value: unknown }) => (typeof value === "string" && value.trim() === "" ? null : typeof value === "string" ? value.trim() : value);
 
@@ -11,6 +11,7 @@ export class UpdateEmployeeDto {
   @IsOptional() @Transform(blankToNull) @ValidateIf((_, value) => value !== null) @IsString() @MaxLength(120) designation?: string | null;
   @IsOptional() @Transform(blankToNull) @ValidateIf((_, value) => value !== null) @IsString() @MaxLength(120) location?: string | null;
   @IsOptional() @IsIn(["ACTIVE", "INACTIVE"]) status?: "ACTIVE" | "INACTIVE";
+  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: "joiningDate must be YYYY-MM-DD" }) joiningDate?: string;
   /** null clears the reporting manager. */
   @IsOptional() @Transform(blankToNull) @ValidateIf((_, value) => value !== null) @IsUUID() managerId?: string | null;
 }

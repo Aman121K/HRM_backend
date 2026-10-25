@@ -45,6 +45,9 @@ export const templateCsv = (prefix = "EMP", managerNumber = `${prefix}001`) =>
   `${prefix}101,Asha Verma,asha.verma@yourcompany.com,Operations,Store Manager,2026-08-01,${managerNumber},MANAGER,ACTIVE,Pune\n` +
   `,Rohit Kumar,rohit.kumar@yourcompany.com,Operations,Barista,01/09/2026,asha.verma@yourcompany.com,EMPLOYEE,ACTIVE,Pune\n`;
 
+/** A pg DATE (parsed as local midnight) as YYYY-MM-DD, without the UTC shift toISOString() would add. */
+const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
 /** Header cell → column name: case, spaces and dashes don't matter ("Full Name" → full_name). */
 const columnKey = (cell: string) => cell.trim().toLowerCase().replace(/[\s-]+/g, "_");
 
@@ -112,7 +115,15 @@ export class PeopleAdminService {
            SELECT 1 FROM chain WHERE id=$3`, [identity.organizationId, input.managerId, id]);
         if (cycle.rowCount) throw new BadRequestException("That manager reports (directly or indirectly) to this employee.");
       }
+      if (input.joiningDate) {
+        if (normalizeDate(input.joiningDate) !== input.joiningDate) throw new BadRequestException("Joining date is not a real date.");
+        const salary = (await client.query(
+          `SELECT to_char(min(effective_from),'YYYY-MM-DD') AS first FROM salary_structures WHERE organization_id=$1 AND employee_id=$2`, [identity.organizationId, id])).rows[0]?.first;
+        if (salary && input.joiningDate > salary)
+          throw new BadRequestException(`This person's salary structure starts on ${salary}. The joining date can't be after that — correct the salary structure first.`);
+      }
       const next = {
+        joining_date: input.joiningDate ?? before.joining_date,
         full_name: input.fullName ?? before.full_name, work_email: input.workEmail ?? before.work_email,
         department: input.department !== undefined ? input.department : before.department,
         designation: input.designation !== undefined ? input.designation : before.designation,
@@ -120,13 +131,13 @@ export class PeopleAdminService {
         status: input.status ?? before.status, manager_id: input.managerId !== undefined ? input.managerId : before.manager_id,
       };
       await client.query(
-        `UPDATE employees SET full_name=$3,work_email=$4,department=$5,designation=$6,location=$7,status=$8,manager_id=$9,version=version+1,updated_at=now()
+        `UPDATE employees SET full_name=$3,work_email=$4,department=$5,designation=$6,location=$7,status=$8,manager_id=$9,joining_date=$10,version=version+1,updated_at=now()
           WHERE organization_id=$1 AND id=$2`,
-        [identity.organizationId, id, next.full_name, next.work_email, next.department, next.designation, next.location, next.status, next.manager_id]);
+        [identity.organizationId, id, next.full_name, next.work_email, next.department, next.designation, next.location, next.status, next.manager_id, next.joining_date]);
       // An inactive employee loses sign-in to this organization; reactivation restores it.
       if (next.status !== before.status && before.user_id)
         await client.query(`UPDATE organization_memberships SET status=$3 WHERE organization_id=$1 AND user_id=$2`, [identity.organizationId, before.user_id, next.status]);
-      const pick = (row: Record<string, unknown>) => ({ fullName: row.full_name, workEmail: row.work_email, department: row.department, designation: row.designation, location: row.location, status: row.status, managerId: row.manager_id, version: row.version });
+      const pick = (row: Record<string, unknown>) => ({ fullName: row.full_name, workEmail: row.work_email, department: row.department, designation: row.designation, location: row.location, status: row.status, managerId: row.manager_id, joiningDate: row.joining_date instanceof Date ? localDate(row.joining_date) : row.joining_date, version: row.version });
       await this.audit(client, identity, "EMPLOYEE_UPDATED", "employee", id, pick(before), { ...pick(next), version: before.version + 1 });
       return this.present(client, identity, id);
     });
@@ -310,7 +321,7 @@ export class PeopleAdminService {
   private async present(client: PoolClient, identity: AuthIdentity, id: string) {
     return (await client.query(
       `SELECT e.id,e.employee_number AS "employeeNumber",e.full_name AS "fullName",e.work_email AS "workEmail",e.department,e.designation,e.location,
-              e.manager_id AS "managerId",m.full_name AS manager,e.joining_date AS "joiningDate",e.status,e.version,e.updated_at AS "updatedAt"
+              e.manager_id AS "managerId",m.full_name AS manager,to_char(e.joining_date,'YYYY-MM-DD') AS "joiningDate",e.status,e.version,e.updated_at AS "updatedAt"
          FROM employees e LEFT JOIN employees m ON m.id=e.manager_id AND m.organization_id=e.organization_id
         WHERE e.organization_id=$1 AND e.id=$2`, [identity.organizationId, id])).rows[0];
   }

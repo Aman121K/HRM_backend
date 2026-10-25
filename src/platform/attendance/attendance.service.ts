@@ -226,7 +226,7 @@ export class AttendanceService implements OnModuleInit {
     if (existing.rowCount) return { id: existing.rows[0].id as string, duplicate: true };
     const last = (await client.query(
       `SELECT event_type FROM attendance_events WHERE organization_id=$1 AND employee_id=$2
-          AND (occurred_at AT TIME ZONE '${ZONE}')::date = ($3::timestamptz AT TIME ZONE '${ZONE}')::date AND occurred_at <= $3
+          AND occurred_at >= (($3::timestamptz AT TIME ZONE '${ZONE}')::date::timestamp AT TIME ZONE '${ZONE}') AND occurred_at <= $3
         ORDER BY occurred_at DESC LIMIT 1`, [punch.organizationId, punch.employeeId, punch.occurredAt])).rows[0];
     const type = punch.type || (last?.event_type === "IN" ? "OUT" : "IN");
     const row = (await client.query(
@@ -335,7 +335,8 @@ export class AttendanceService implements OnModuleInit {
       `SELECT id, event_type AS type, occurred_at AS "occurredAt", source, within_geofence AS "withinGeofence", distance_metres::float AS "distanceMetres",
               review_status AS "reviewStatus", selfie_file_id AS "selfieFileId"
          FROM attendance_events WHERE organization_id=$1 AND employee_id=$2 AND review_status <> 'REJECTED'
-          AND (occurred_at AT TIME ZONE '${ZONE}')::date = (now() AT TIME ZONE '${ZONE}')::date ORDER BY occurred_at`,
+          AND occurred_at >= ((now() AT TIME ZONE '${ZONE}')::date::timestamp AT TIME ZONE '${ZONE}')
+          AND occurred_at < (((now() AT TIME ZONE '${ZONE}')::date + 1)::timestamp AT TIME ZONE '${ZONE}') ORDER BY occurred_at`,
       [organizationId, employeeId])).rows;
     if (!events) throw new NotFoundException();
     const last = events[events.length - 1];

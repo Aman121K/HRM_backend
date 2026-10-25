@@ -3115,6 +3115,7 @@ CREATE UNIQUE INDEX attendance_devices_one_request ON public.attendance_devices 
 CREATE INDEX attendance_employee_timeline ON public.attendance_events USING btree (organization_id, employee_id, occurred_at DESC, id);
 CREATE INDEX attendance_location_review ON public.attendance_events USING btree (organization_id, employee_id, accuracy_metres, occurred_at DESC);
 CREATE INDEX attendance_review_queue ON public.attendance_events USING btree (organization_id, review_status, occurred_at DESC) WHERE (review_status = 'PENDING'::text);
+CREATE INDEX attendance_reviewed_history ON public.attendance_events USING btree (organization_id, review_status, occurred_at DESC) WHERE (review_status = ANY (ARRAY['APPROVED'::text, 'REJECTED'::text]));
 CREATE INDEX audit_actor_history ON public.audit_log USING btree (organization_id, actor_user_id, created_at DESC, id);
 CREATE UNIQUE INDEX audit_chain_order ON public.audit_log USING btree (organization_id, chain_seq);
 CREATE INDEX audit_entity_history ON public.audit_log USING btree (organization_id, entity_type, entity_id, created_at DESC, id);
@@ -3141,6 +3142,8 @@ CREATE INDEX email_outbox_delivery ON public.email_outbox USING btree (status, a
 CREATE INDEX email_outbox_recent ON public.email_outbox USING btree (organization_id, created_at DESC);
 CREATE INDEX employees_department_directory ON public.employees USING btree (organization_id, status, department, full_name, id);
 CREATE INDEX employees_manager_directory ON public.employees USING btree (organization_id, manager_id, status, full_name, id);
+CREATE INDEX employees_register_order ON public.employees USING btree (organization_id, status, full_name, id);
+CREATE INDEX employees_work_email_lower ON public.employees USING btree (organization_id, lower(work_email));
 CREATE INDEX hr_case_events_timeline ON public.hr_case_events USING btree (organization_id, case_id, id);
 CREATE INDEX hr_cases_approver_queue ON public.hr_cases USING btree (organization_id, approver_id, status, created_at, id);
 CREATE INDEX hr_cases_assignee_queue ON public.hr_cases USING btree (organization_id, assignee_id, status, due_at, id) WHERE (assignee_id IS NOT NULL);
@@ -3174,6 +3177,7 @@ CREATE INDEX lms_enrollments_learner ON public.lms_enrollments USING btree (orga
 CREATE INDEX lms_lessons_outline ON public.lms_lessons USING btree (organization_id, course_id, "position", id);
 CREATE INDEX lms_questions_quiz ON public.lms_questions USING btree (organization_id, lesson_id, "position");
 CREATE INDEX lms_quiz_attempts_learner ON public.lms_quiz_attempts USING btree (organization_id, enrollment_id, lesson_id, created_at);
+CREATE INDEX memberships_org_role_active ON public.organization_memberships USING btree (organization_id, role, user_id) WHERE (status = 'ACTIVE'::text);
 CREATE INDEX memberships_user_active ON public.organization_memberships USING btree (user_id, status, organization_id);
 CREATE INDEX onboarding_document_reviews_joiner ON public.onboarding_document_reviews USING btree (organization_id, joiner_id);
 CREATE UNIQUE INDEX onboarding_joiners_candidate ON public.onboarding_joiners USING btree (organization_id, candidate_case_id) WHERE (candidate_case_id IS NOT NULL);
@@ -3243,6 +3247,7 @@ CREATE UNIQUE INDEX tax_declarations_one_open ON public.tax_declarations USING b
 CREATE INDEX tax_declarations_review_queue ON public.tax_declarations USING btree (organization_id, status, submitted_at, id);
 CREATE INDEX tds_alloc_employee ON public.tds_challan_allocations USING btree (organization_id, employee_id, period);
 CREATE INDEX tds_challans_period ON public.tds_challans USING btree (organization_id, fy_start, period);
+CREATE INDEX users_email_lower ON public.users USING btree (lower(email));
 CREATE UNIQUE INDEX users_oidc_identity ON public.users USING btree (oidc_issuer, oidc_subject) WHERE (oidc_subject IS NOT NULL);
 CREATE INDEX webhook_deliveries_log ON public.webhook_deliveries USING btree (organization_id, subscription_id, created_at DESC);
 CREATE UNIQUE INDEX webhook_events_audit ON public.webhook_events USING btree (organization_id, source_audit_id) WHERE (source_audit_id IS NOT NULL);
