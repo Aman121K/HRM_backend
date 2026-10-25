@@ -42,6 +42,25 @@ Production: `Dockerfile` (targets `api`, `worker`, `migrate`), `docker-compose.p
 and the runbooks in `docs/ops/` (AWS deploy, backup/restore, incident response, go-live checklist). Payroll statutory
 items for CA review: `docs/payroll-statutory-review.md`.
 
+## Onboarding a new company (step by step)
+
+1. **Super admin → Brands → Add a brand.** Enter the brand name (the subdomain is suggested from it, e.g.
+   `demo-bakers.<APP_DOMAIN>`), an employee ID prefix (e.g. `DBK`) and the first HR administrator's name and work email.
+   No DNS change is needed per company: the wildcard record `*.<APP_DOMAIN>` already points at the web app.
+2. **The HR admin gets an email** with a one-time link (72 hours) to `https://<slug>.<APP_DOMAIN>/activate`, sets a
+   password and, as an admin, sets up 2-step verification. If the email is lost, the super admin opens the brand →
+   **Edit → Administrators → Resend invite** (`POST /api/v2/platform/auth/orgs/:orgId/users/:userId/invite`).
+3. **HR → Employees → Import CSV** (`/hris/import`): download the template (it uses the brand's own ID prefix), fill
+   it in Excel / Google Sheets, save as CSV, validate, review, commit. Only `full_name`, `work_email` and
+   `joining_date` are required. Blank `employee_number` → next number in the brand's series; dates may be
+   `DD/MM/YYYY`, `5 Oct 2026` or `YYYY-MM-DD`; the manager column takes an employee number or a work email; role
+   defaults to EMPLOYEE and status to ACTIVE. Re-uploading the same people updates them (matched by number or email).
+4. **Send sign-in invitations** from the import result (or Employees → Invite all): every active employee without a
+   login gets their own set-up link on the brand's subdomain. They can then use the web app or the mobile app.
+
+Fuller employee data (date of birth, PAN/UAN, bank, salary, leave balances, year-to-date payroll) comes in through the
+switch-over checklist at `/hris/import/switch-over`.
+
 ## Application backend
 
 All features run on the v2 platform API (NestJS + Fastify, PostgreSQL with row-level security per brand) under

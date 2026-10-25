@@ -210,4 +210,10 @@ export class PlatformAuthController {
   resetMfa(@Req() request: FastifyRequest, @Param("orgId", ParseUUIDPipe) orgId: string, @Param("userId", ParseUUIDPipe) userId: string) {
     return this.access.platformResetMfa(request.identity!, orgId, userId);
   }
+
+  /** Sends (or re-sends) the set-up-your-account email to a brand's owner / HR / payroll admin. */
+  @Post("orgs/:orgId/users/:userId/invite") @HttpCode(200)
+  inviteMember(@Req() request: FastifyRequest, @Param("orgId", ParseUUIDPipe) orgId: string, @Param("userId", ParseUUIDPipe) userId: string) {
+    return this.access.platformInviteMember(request.identity!, orgId, userId);
+  }
 }

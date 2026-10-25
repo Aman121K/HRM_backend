@@ -231,6 +231,27 @@ export class AccountAccessService {
     return result.existing ? { granted: true, email } : { invited: true, email, expiresAt: result.expiresAt };
   }
 
+  /**
+   * Platform admin sends the account set-up email to a brand admin — the first HR admin of a new brand can't be
+   * invited by anyone inside that brand yet. People who already have a Northstar password just sign in.
+   */
+  async platformInviteMember(identity: AuthIdentity, organizationId: string, userId: string) {
+    if (!(await this.isPlatformAdmin(identity.userId))) throw new ForbiddenException("Only platform administrators can do this.");
+    const member = (await this.database.systemQuery(
+      `SELECT e.id AS employee_id, (u.password_hash IS NOT NULL OR u.oidc_subject IS NOT NULL) AS can_sign_in, u.email
+         FROM organization_memberships m JOIN users u ON u.id=m.user_id
+         LEFT JOIN employees e ON e.organization_id=m.organization_id AND e.user_id=m.user_id
+        WHERE m.organization_id=$1 AND m.user_id=$2 AND m.status='ACTIVE' AND m.role IN ('OWNER','HR_ADMIN','PAYROLL_ADMIN')`,
+      [organizationId, userId])).rows[0];
+    if (!member) throw new NotFoundException("That person is not an admin of this brand.");
+    if (member.can_sign_in) return { invited: false, alreadyActive: true, email: member.email };
+    if (!member.employee_id) throw new BadRequestException("This admin has no employee record in the brand.");
+    const actingInBrand: AuthIdentity = { organizationId, userId: identity.userId, employeeId: "", roles: ["PLATFORM_ADMIN"] };
+    const result = await this.database.platformTransaction((client) => this.inviteOne(client, actingInBrand, member.employee_id, true));
+    await this.sendInvite(result);
+    return { invited: true, email: result.email, expiresAt: result.expiresAt };
+  }
+
   /** Platform admin resets a brand owner's (or any member's) MFA. */
   async platformResetMfa(identity: AuthIdentity, organizationId: string, userId: string) {
     if (!(await this.isPlatformAdmin(identity.userId))) throw new ForbiddenException("Only platform administrators can do this.");

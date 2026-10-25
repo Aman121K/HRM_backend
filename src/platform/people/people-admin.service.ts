@@ -6,7 +6,12 @@ import type { ImportCsvDto, UpdateEmployeeDto } from "./people-admin.dto";
 
 export const PEOPLE_ADMIN_ROLES = ["HR_ADMIN", "OWNER"];
 export const IMPORT_COLUMNS = ["employee_number", "full_name", "work_email", "department", "designation", "joining_date", "manager_employee_number", "role", "status", "location"] as const;
+/** Only these columns must be present; the rest are optional and default sensibly (see review()). */
+const REQUIRED_COLUMNS = ["full_name", "work_email", "joining_date"] as const;
 const ROLES = ["OWNER", "HR_ADMIN", "MANAGER", "EMPLOYEE", "PAYROLL_ADMIN"];
+/** Friendly role spellings HR teams actually type. */
+const ROLE_ALIASES: Record<string, string> = { HR: "HR_ADMIN", "HR ADMIN": "HR_ADMIN", ADMIN: "HR_ADMIN", PAYROLL: "PAYROLL_ADMIN", "PAYROLL ADMIN": "PAYROLL_ADMIN", STAFF: "EMPLOYEE", EMP: "EMPLOYEE" };
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 /** Roles only an OWNER may grant, change or deactivate. */
 const PRIVILEGED = ["OWNER", "HR_ADMIN"];
 const MAX_ROWS = 2000;
@@ -34,14 +39,50 @@ export function parseCsv(source: string) {
   return rows;
 }
 
-export const templateCsv = () =>
-  `${IMPORT_COLUMNS.join(",")}\nBT003,Sample Employee,sample@company.com,Operations,Associate,2026-08-01,BT001,EMPLOYEE,ACTIVE,Delhi\n`;
+/** Template with the brand's own ID prefix. The second row shows that the employee number may be left blank. */
+export const templateCsv = (prefix = "EMP", managerNumber = `${prefix}001`) =>
+  `${IMPORT_COLUMNS.join(",")}\n` +
+  `${prefix}101,Asha Verma,asha.verma@yourcompany.com,Operations,Store Manager,2026-08-01,${managerNumber},MANAGER,ACTIVE,Pune\n` +
+  `,Rohit Kumar,rohit.kumar@yourcompany.com,Operations,Barista,01/09/2026,asha.verma@yourcompany.com,EMPLOYEE,ACTIVE,Pune\n`;
+
+/** Header cell → column name: case, spaces and dashes don't matter ("Full Name" → full_name). */
+const columnKey = (cell: string) => cell.trim().toLowerCase().replace(/[\s-]+/g, "_");
+
+/**
+ * Dates as Indian spreadsheets write them: 2026-10-05, 05/10/2026, 5-10-2026, 05.10.2026, 5 Oct 2026, 05-Oct-26.
+ * Day-first (Indian convention). Returns YYYY-MM-DD or null when the date doesn't exist.
+ */
+export function normalizeDate(value: string): string | null {
+  const v = value.trim();
+  let y: number, m: number, d: number;
+  let match = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (match) [y, m, d] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  else if ((match = v.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/))) [d, m, y] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  else if ((match = v.match(/^(\d{1,2})[\s/-]([A-Za-z]{3,9})[\s/-](\d{2}|\d{4})$/))) {
+    const month = MONTHS.indexOf(match[2].slice(0, 3).toLowerCase());
+    if (month < 0) return null;
+    [d, m, y] = [Number(match[1]), month + 1, match[3].length === 2 ? 2000 + Number(match[3]) : Number(match[3])];
+  } else return null;
+  const date = new Date(Date.UTC(y, m - 1, d));
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d || y < 1950 || y > 2100) return null;
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
 
 @Injectable()
 export class PeopleAdminService {
   constructor(private readonly database: DatabaseService) {}
 
   private isOwner(identity: AuthIdentity) { return identity.roles.includes("OWNER"); }
+
+  /** CSV template using this brand's employee ID prefix and the downloading admin as the example manager. */
+  template(identity: AuthIdentity) {
+    return this.database.tenantTransaction(identity, async (client) => {
+      const row = (await client.query(
+        `SELECT o.employee_prefix AS prefix, e.employee_number AS me FROM organizations o LEFT JOIN employees e ON e.organization_id=o.id AND e.id=$2 WHERE o.id=$1`,
+        [identity.organizationId, identity.employeeId || null])).rows[0];
+      return templateCsv(row?.prefix || "EMP", row?.me || undefined);
+    });
+  }
 
   /** HR edits one employee record (optimistic concurrency, audited, manager-cycle safe). */
   update(identity: AuthIdentity, id: string, input: UpdateEmployeeDto) {
@@ -159,9 +200,9 @@ export class PeopleAdminService {
   private async review(client: PoolClient, identity: AuthIdentity, csv: string): Promise<ImportRow[]> {
     const parsed = parseCsv(csv);
     if (!parsed.length) throw new BadRequestException("The CSV file is empty.");
-    const header = parsed[0].map((cell) => cell.toLowerCase());
-    const missing = IMPORT_COLUMNS.filter((column) => !header.includes(column));
-    if (missing.length) throw new BadRequestException(`Missing columns: ${missing.join(", ")}`);
+    const header = parsed[0].map(columnKey);
+    const missing = REQUIRED_COLUMNS.filter((column) => !header.includes(column));
+    if (missing.length) throw new BadRequestException(`Missing columns: ${missing.join(", ")}. Download the template to see the expected headings.`);
     if (parsed.length - 1 > MAX_ROWS) throw new BadRequestException(`Import at most ${MAX_ROWS} employees per file.`);
     const existing = new Map<string, Existing>((await client.query(
       `SELECT e.id, e.user_id, e.employee_number, lower(e.work_email) AS work_email, e.manager_id, m.role
@@ -169,11 +210,41 @@ export class PeopleAdminService {
         WHERE e.organization_id=$1`, [identity.organizationId])).rows.map((row: Existing) => [row.employee_number, row]));
     const emailOwner = new Map([...existing.values()].map((row) => [row.work_email, row.employee_number]));
     const rows: ImportRow[] = parsed.slice(1).map((values, index) => {
-      const normalized = Object.fromEntries(IMPORT_COLUMNS.map((column) => [column, (values[header.indexOf(column)] || "").trim()])) as ImportRow["normalized"];
-      normalized.role = normalized.role.toUpperCase();
-      normalized.status = normalized.status.toUpperCase();
+      const normalized = Object.fromEntries(IMPORT_COLUMNS.map((column) => [column, header.includes(column) ? (values[header.indexOf(column)] || "").trim() : ""])) as ImportRow["normalized"];
+      const role = normalized.role.toUpperCase().replace(/_/g, " ").trim();
+      normalized.role = ROLE_ALIASES[role] || role.replace(/ /g, "_") || "EMPLOYEE";
+      normalized.status = normalized.status.toUpperCase() || "ACTIVE";
+      normalized.work_email = normalized.work_email.toLowerCase();
       return { row: index + 2, normalized, errors: [], warnings: [], outcome: "CREATE" as const };
     });
+    // Rows without an employee number get the next free number in this brand's series (e.g. GT014, GT015…).
+    // Numbers are assigned in file order, so a dry run and the commit that follows it produce the same IDs.
+    if (rows.some((row) => !row.normalized.employee_number)) {
+      const prefix = (await client.query(`SELECT employee_prefix FROM organizations WHERE id=$1`, [identity.organizationId])).rows[0]?.employee_prefix || "EMP";
+      const pattern = new RegExp(`^${prefix}(\\d+)$`);
+      const used = [...existing.keys(), ...rows.map((row) => row.normalized.employee_number)].map((number) => Number(number.match(pattern)?.[1] || 0));
+      let next = Math.max(0, ...used) + 1;
+      for (const row of rows) {
+        if (row.normalized.employee_number) continue;
+        // Re-imports of a person already on file keep their number (matched by work email).
+        const known = [...existing.values()].find((item) => item.work_email === row.normalized.work_email);
+        if (known) { row.normalized.employee_number = known.employee_number; continue; }
+        row.normalized.employee_number = `${prefix}${String(next++).padStart(3, "0")}`;
+        row.warnings.push(`Employee number ${row.normalized.employee_number} assigned automatically`);
+      }
+    }
+    // The manager column takes an employee number or the manager's work email.
+    const numberByEmail = new Map<string, string>([...existing.values()].map((row) => [row.work_email, row.employee_number]));
+    for (const row of rows) if (row.normalized.work_email) numberByEmail.set(row.normalized.work_email, row.normalized.employee_number);
+    for (const row of rows) {
+      const manager = row.normalized.manager_employee_number;
+      if (manager.includes("@")) row.normalized.manager_employee_number = numberByEmail.get(manager.toLowerCase()) || manager;
+    }
+    for (const row of rows) {
+      if (!row.normalized.joining_date) continue;
+      const date = normalizeDate(row.normalized.joining_date);
+      if (date) row.normalized.joining_date = date;
+    }
     // Sign-in accounts that already exist for CREATE rows (linked, not modified).
     const emails = rows.map((row) => row.normalized.work_email.toLowerCase()).filter(Boolean);
     const accounts = new Map((await client.query(
@@ -193,13 +264,13 @@ export class PeopleAdminService {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) errors.push("Valid work email is required");
       else if (seenEmail.has(email)) errors.push("Duplicate work email in file");
       seenEmail.add(email);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(x.joining_date) || Number.isNaN(Date.parse(x.joining_date))) errors.push("Joining date must be YYYY-MM-DD");
-      if (!ROLES.includes(x.role)) errors.push("Invalid role");
-      if (!["ACTIVE", "INACTIVE"].includes(x.status)) errors.push("Invalid status");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(x.joining_date) || Number.isNaN(Date.parse(x.joining_date))) errors.push("Joining date is missing or not a real date (use DD/MM/YYYY or YYYY-MM-DD)");
+      if (!ROLES.includes(x.role)) errors.push(`Role must be one of EMPLOYEE, MANAGER, HR_ADMIN, PAYROLL_ADMIN or OWNER`);
+      if (!["ACTIVE", "INACTIVE"].includes(x.status)) errors.push("Status must be ACTIVE or INACTIVE");
       for (const column of ["department", "designation", "location"] as const) if (x[column].length > 120) errors.push(`${column} must be 120 characters or fewer`);
       if (x.manager_employee_number && x.manager_employee_number === x.employee_number) errors.push("Employee cannot manage themselves");
       else if (x.manager_employee_number && !existing.has(x.manager_employee_number) && !fileNumbers.has(x.manager_employee_number))
-        errors.push(`Manager ${x.manager_employee_number} does not exist in this organization or file`);
+        errors.push(`Manager ${x.manager_employee_number} is not in this company or this file`);
       if (!x.manager_employee_number) warnings.push("No reporting manager assigned");
       const owner = emailOwner.get(email);
       if (owner && owner !== x.employee_number) errors.push(`Work email already belongs to ${owner}`);

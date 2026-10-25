@@ -157,9 +157,12 @@ export class OrganizationsService {
     await this.requirePlatformAdmin(identity);
     const rows = (await this.database.systemQuery(
       `SELECT u.id AS "userId", u.email, coalesce(e.full_name, u.full_name) AS "fullName", e.employee_number AS "employeeNumber", e.designation, m.role,
-              u.last_sign_in_at AS "lastSignInAt", (u.oidc_subject IS NOT NULL) AS "ssoLinked"
+              u.last_sign_in_at AS "lastSignInAt", (u.oidc_subject IS NOT NULL) AS "ssoLinked", (u.password_hash IS NOT NULL) AS "hasPassword",
+              i.created_at AS "invitedAt", i.expires_at AS "inviteExpiresAt", i.accepted_at AS "inviteAcceptedAt"
          FROM organization_memberships m JOIN users u ON u.id=m.user_id
          LEFT JOIN employees e ON e.organization_id=m.organization_id AND e.user_id=m.user_id
+         LEFT JOIN LATERAL (SELECT created_at, expires_at, accepted_at FROM auth_invites
+                             WHERE organization_id=m.organization_id AND user_id=m.user_id AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1) i ON true
         WHERE m.organization_id=$1 AND m.status='ACTIVE' AND m.role IN ('OWNER','HR_ADMIN','PAYROLL_ADMIN') ORDER BY m.role, coalesce(e.full_name, u.full_name)`,
       [organizationId])).rows;
     return { items: rows };

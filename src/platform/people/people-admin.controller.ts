@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { FastifyRequest } from "fastify";
 import { Roles } from "../auth/roles.decorator";
 import { ImportCsvDto, UpdateEmployeeDto } from "./people-admin.dto";
-import { PEOPLE_ADMIN_ROLES, PeopleAdminService, templateCsv } from "./people-admin.service";
+import { PEOPLE_ADMIN_ROLES, PeopleAdminService } from "./people-admin.service";
 
 /** HR administration of the employee register (replaces legacy /api/v1/employees PATCH + CSV import). */
 @ApiTags("people") @ApiBearerAuth() @Controller("api/v2/employees")
@@ -12,8 +12,8 @@ export class PeopleAdminController {
 
   @Get("import/template") @Roles(...PEOPLE_ADMIN_ROLES) @Header("cache-control", "no-store")
   @ApiOperation({ summary: "CSV template for the guided employee import" })
-  template() {
-    const bytes = Buffer.from(templateCsv(), "utf8");
+  async template(@Req() request: FastifyRequest) {
+    const bytes = Buffer.from(await this.admin.template(request.identity!), "utf8");
     return new StreamableFile(bytes, { type: "text/csv; charset=utf-8", disposition: `attachment; filename="employee-import-template.csv"`, length: bytes.length });
   }
 
