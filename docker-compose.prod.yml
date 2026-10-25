@@ -1,0 +1,152 @@
+# Northstar HRM — reference production stack (UNTESTED here: Docker is not installed on the build machine; validated for
+# YAML syntax only). Postgres is EXTERNAL (Amazon RDS for PostgreSQL 16) and files go to EXTERNAL S3; Redis is included
+# for single-host deployments — on AWS use ElastiCache (TLS + AUTH) and delete the redis service.
+#
+#   cp deploy/env.production.example .env.production   # fill from Secrets Manager; never commit it
+#   docker compose -f docker-compose.prod.yml --env-file .env.production run --rm migrate
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d web api worker
+#
+# A TLS-terminating load balancer (ALB / nginx / Caddy) must sit in front: web on :3000, api on :4100, both bound to
+# 127.0.0.1 here so nothing is reachable without it. See docs/ops/deploy-aws.md.
+name: northstar
+
+x-hardening: &hardening
+  read_only: true
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: ["ALL"]
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: "20m", max-file: "5" }
+
+x-backend-env: &backend-env
+  NODE_ENV: production
+  DATABASE_URL: ${DATABASE_URL:?owner-role URL (hrm_app), sslmode=verify-full}
+  DATABASE_URL_RUNTIME: ${DATABASE_URL_RUNTIME:?runtime-role URL (hrm_runtime)}
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+  APP_DOMAIN: ${APP_DOMAIN:?e.g. people.example.in}
+  APP_BASE_URL: ${APP_BASE_URL:?e.g. https://people.example.in}
+  CORS_ORIGIN: ${CORS_ORIGIN:?e.g. https://people.example.in}
+  TRUST_PROXY: ${TRUST_PROXY:-1}
+  ALLOW_DEMO_IDENTITY: "false"
+  EXPOSE_OPENAPI: "false"
+  OIDC_ISSUER: ${OIDC_ISSUER:-}
+  OIDC_AUDIENCE: ${OIDC_AUDIENCE:-}
+  OIDC_JWKS_URL: ${OIDC_JWKS_URL:-}
+  OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+  AUTH_SIGNING_KEY: ${AUTH_SIGNING_KEY:?Ed25519 private key PEM}
+  AUTH_ISSUER: ${AUTH_ISSUER:?e.g. https://api.people.example.in}
+  DATA_ENCRYPTION_KEYS: ${DATA_ENCRYPTION_KEYS:?kid:base64 key list}
+  DATA_ENCRYPTION_ACTIVE_KEY: ${DATA_ENCRYPTION_ACTIVE_KEY:?active kid}
+  DATA_INDEX_KEY: ${DATA_INDEX_KEY:?base64 32-byte key}
+  INTEGRATIONS_MASTER_KEY: ${INTEGRATIONS_MASTER_KEY:?32+ chars}
+  PAYOUTS_WEBHOOK_SECRET: ${PAYOUTS_WEBHOOK_SECRET:?24+ chars}
+  FILES_STORAGE: s3
+  FILES_S3_BUCKET: ${FILES_S3_BUCKET:?bucket}
+  FILES_S3_REGION: ${FILES_S3_REGION:-ap-south-1}
+  FILES_S3_PREFIX: ${FILES_S3_PREFIX:-prod/}
+  FILES_S3_KMS_KEY_ID: ${FILES_S3_KMS_KEY_ID:-}
+  AWS_REGION: ${AWS_REGION:-ap-south-1}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASS: ${SMTP_PASS:-}
+  MAIL_FROM: ${MAIL_FROM:-}
+  SENTRY_DSN: ${SENTRY_DSN:-}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  APP_VERSION: ${APP_VERSION:-0.0.0}
+
+services:
+  migrate:
+    image: ${REGISTRY:-northstar}/migrate:${APP_VERSION:-latest}
+    build: { context: ., dockerfile: Dockerfile, target: migrate, args: { APP_VERSION: "${APP_VERSION:-0.0.0}", GIT_SHA: "${GIT_SHA:-}" } }
+    <<: *hardening
+    restart: "no"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?owner-role URL}
+      # Optional, first install only: lets the job create/update the hrm_runtime role and set its password.
+      DATABASE_ADMIN_URL: ${DATABASE_ADMIN_URL:-}
+      RUNTIME_DB_PASSWORD: ${RUNTIME_DB_PASSWORD:-}
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+
+  api:
+    image: ${REGISTRY:-northstar}/api:${APP_VERSION:-latest}
+    build: { context: ., dockerfile: Dockerfile, target: api, args: { APP_VERSION: "${APP_VERSION:-0.0.0}", GIT_SHA: "${GIT_SHA:-}" } }
+    <<: *hardening
+    environment:
+      <<: *backend-env
+      BACKEND_V2_PORT: "4100"
+      SHUTDOWN_DRAIN_MS: "5000"
+    ports: ["127.0.0.1:4100:4100"]
+    tmpfs: ["/tmp:size=256m,mode=1777"]
+    stop_grace_period: 45s
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4100/api/v2/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  worker:
+    image: ${REGISTRY:-northstar}/worker:${APP_VERSION:-latest}
+    build: { context: ., dockerfile: Dockerfile, target: worker, args: { APP_VERSION: "${APP_VERSION:-0.0.0}", GIT_SHA: "${GIT_SHA:-}" } }
+    <<: *hardening
+    environment:
+      <<: *backend-env
+      WORKER_HEALTH_PORT: "4190"
+      JOBS_CONCURRENCY: ${JOBS_CONCURRENCY:-4}
+      JOBS_SHUTDOWN_GRACE_MS: "30000"
+    tmpfs: ["/tmp:size=512m,mode=1777"]
+    stop_grace_period: 45s
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4190/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 45s
+      retries: 3
+
+  web:
+    image: ${REGISTRY:-northstar}/web:${APP_VERSION:-latest}
+    # The web app lives in its own repository (HRM_frontend): check it out next to this one or set FRONTEND_DIR,
+    # or skip the build and pull the image your frontend CI pushed to REGISTRY.
+    build:
+      context: ${FRONTEND_DIR:-../frontend}
+      dockerfile: Dockerfile
+      target: web
+      args:
+        NEXT_PUBLIC_PLATFORM_API_URL: ${NEXT_PUBLIC_PLATFORM_API_URL:?e.g. https://api.people.example.in}
+        NEXT_PUBLIC_APP_DOMAIN: ${NEXT_PUBLIC_APP_DOMAIN:?e.g. people.example.in}
+        NEXT_PUBLIC_OIDC_ISSUER: ${NEXT_PUBLIC_OIDC_ISSUER:-}
+        APP_VERSION: "${APP_VERSION:-0.0.0}"
+        GIT_SHA: "${GIT_SHA:-}"
+    <<: *hardening
+    environment:
+      NODE_ENV: production
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+    ports: ["127.0.0.1:3000:3000"]
+    tmpfs: ["/tmp:size=64m,mode=1777", "/app/.next/cache:size=256m,uid=1000,gid=1000"]
+    stop_grace_period: 30s
+    depends_on:
+      api: { condition: service_healthy }
+
+  redis:
+    image: redis:7.4-alpine
+    <<: *hardening
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD and put it in REDIS_URL}", "--maxmemory-policy", "noeviction"]
+    volumes: ["redis-data:/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?}
+
+volumes:
+  redis-data: {}

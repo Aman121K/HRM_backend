@@ -1,0 +1,18 @@
+import { hr, payroll, log, zip, pdf, as } from "./lib.mjs";
+const good = zip([{ name: "payslips/BTS501_2026-07.pdf", bytes: pdf("BTS501 July") }, { name: "payslips/BTS501_2026-08.pdf", bytes: pdf("BTS501 Aug") }, { name: "payslips/BTS502-202608.pdf", bytes: pdf("BTS502 Aug") }, { name: "__MACOSX/._x", bytes: Buffer.from("x") }]);
+const bad = zip([{ name: "BTS501_2026-07.pdf", bytes: Buffer.from("not a pdf") }, { name: "readme.txt", bytes: Buffer.from("hi") }, { name: "NOPE_2026-07.pdf", bytes: pdf("x") }, { name: "BTS502_2031-01.pdf", bytes: pdf("x") }]);
+let r = await hr("POST", "/imports/payslips/dry-run", { zipBase64: good.toString("base64") }); log("HR payslip dry-run (expect 403)", r, (j) => j.message);
+r = await payroll("POST", "/imports/payslips/dry-run", { zipBase64: Buffer.from("garbage").toString("base64") }); log("not a zip (expect 400)", r, (j) => j.message);
+r = await payroll("POST", "/imports/payslips/dry-run", { zipBase64: bad.toString("base64") }); log("bad zip dry-run", r, (j) => j.rows?.map((x) => [x.changes.file, x.errors]));
+r = await payroll("POST", "/imports/payslips/dry-run", { zipBase64: good.toString("base64"), fileName: "payslips.zip" }); log("payslip dry-run", r, (j) => ({ summary: j.summary, totals: j.totals }));
+r = await payroll("POST", "/imports/payslips/commit", { zipBase64: good.toString("base64"), fileName: "payslips.zip" }); log("payslip commit", r, (j) => ({ idempotent: j.idempotent, id: j.batch?.id, msg: j.message }));
+r = await payroll("POST", "/imports/payslips/commit", { zipBase64: good.toString("base64"), fileName: "payslips.zip" }); log("payslip re-commit (idempotent)", r, (j) => ({ idempotent: j.idempotent }));
+const me = as("blue-tokai", "BTS501");
+r = await me("GET", "/imports/payslips/mine"); log("BTS501 'Previous payslips (imported)'", r, (j) => j.items?.map((x) => [x.period, x.label, x.name]));
+const first = r.j.items[0];
+const dl = await fetch(`http://127.0.0.1:4100/api/v2/files/${first.id}/content`, { headers: { "x-tenant-id": "blue-tokai", "x-employee-id": "BTS501" } });
+console.log("BTS501 downloads own payslip".padEnd(58), dl.status, (await dl.text()).slice(0, 8));
+const other = await fetch(`http://127.0.0.1:4100/api/v2/files/${first.id}/content`, { headers: { "x-tenant-id": "blue-tokai", "x-employee-id": "BTS502" } });
+console.log("BTS502 downloads BTS501's payslip (expect 404)".padEnd(58), other.status);
+const hrDl = await fetch(`http://127.0.0.1:4100/api/v2/files/${first.id}/content`, { headers: { "x-tenant-id": "blue-tokai", "x-employee-id": "BT000" } });
+console.log("HR (non-payroll) downloads payslip (expect 404)".padEnd(58), hrDl.status);

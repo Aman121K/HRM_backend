@@ -1,0 +1,17 @@
+import './lib/dev-only.mjs'; // refuses to run in production — see the file
+import pg from 'pg';
+const pool=new pg.Pool({connectionString:process.env.DATABASE_URL});
+const c=await pool.connect();
+try{await c.query('BEGIN');
+ const org=(await c.query(`INSERT INTO organizations(slug,name) VALUES('blue-tokai','Blue Tokai Coffee Roasters') ON CONFLICT(slug) DO UPDATE SET name=excluded.name RETURNING id`)).rows[0];
+ const users=[];for(const [email,name] of [['hr@bluetokai.example','Blue Tokai HR'],['manager@bluetokai.example','Ananya Sharma'],['employee@bluetokai.example','Ravi Kumar']]) users.push((await c.query(`INSERT INTO users(email,full_name) VALUES($1,$2) ON CONFLICT(email) DO UPDATE SET full_name=excluded.full_name RETURNING id`,[email,name])).rows[0]);
+ for(const [i,role] of ['HR_ADMIN','MANAGER','EMPLOYEE'].entries()) await c.query(`INSERT INTO organization_memberships(organization_id,user_id,role) VALUES($1,$2,$3) ON CONFLICT(organization_id,user_id) DO UPDATE SET role=excluded.role`,[org.id,users[i].id,role]);
+ await c.query(`SELECT set_config('app.organization_id',$1,true)`,[org.id]);
+ await c.query(`INSERT INTO employees(organization_id,user_id,employee_number,full_name,work_email,department,designation,joining_date) VALUES($1,$2,'BT000','Blue Tokai HR','hr@bluetokai.example','People','HR Administrator','2022-01-01') ON CONFLICT(organization_id,employee_number) DO UPDATE SET user_id=excluded.user_id`,[org.id,users[0].id]);
+ const manager=(await c.query(`INSERT INTO employees(organization_id,user_id,employee_number,full_name,work_email,department,designation,joining_date) VALUES($1,$2,'BT001','Ananya Sharma','manager@bluetokai.example','Retail Operations','Area Manager','2023-01-10') ON CONFLICT(organization_id,employee_number) DO UPDATE SET user_id=excluded.user_id RETURNING id`,[org.id,users[1].id])).rows[0];
+ await c.query(`INSERT INTO employees(organization_id,user_id,employee_number,full_name,work_email,manager_id,department,designation,joining_date) VALUES($1,$2,'BT002','Ravi Kumar','employee@bluetokai.example',$3,'Cafe Operations','Barista','2025-04-01') ON CONFLICT(organization_id,employee_number) DO UPDATE SET manager_id=excluded.manager_id,user_id=excluded.user_id`,[org.id,users[2].id,manager.id]);
+ for(const row of [['CL','Casual Leave',6],['SL','Sick Leave',7],['EL','Earned Leave',18],['LOP','Loss of Pay',365],['MAT','Maternity Leave',182],['PAT','Paternity Leave',15],['BEREAVEMENT','Bereavement Leave',5]]) await c.query(`INSERT INTO leave_types(organization_id,code,name,annual_quota) VALUES($1,$2,$3,$4) ON CONFLICT(organization_id,code) DO UPDATE SET name=excluded.name,annual_quota=excluded.annual_quota`,[org.id,...row]);
+ const employee=(await c.query(`SELECT id FROM employees WHERE organization_id=$1 AND employee_number='BT002'`,[org.id])).rows[0];
+ await c.query(`INSERT INTO payslips(organization_id,employee_id,period,gross,deductions,net,currency,status,published_at,storage_reference) VALUES($1,$2,'2026-06',48500,4200,44300,'INR','PUBLISHED',now(),'generated:demo') ON CONFLICT(organization_id,employee_id,period) DO UPDATE SET status='PUBLISHED',published_at=now()`,[org.id,employee.id]);
+ await c.query('COMMIT');console.log(JSON.stringify({organizationId:org.id,hrUserId:users[0].id,managerUserId:users[1].id,employeeUserId:users[2].id},null,2));
+}catch(e){await c.query('ROLLBACK');throw e}finally{c.release();await pool.end()}

@@ -1,0 +1,6 @@
+employee_number,leave_type_code,opening_balance,taken_this_year,as_of_date
+BTS501,EL,12.5,3,
+BTS501,CL,4,2,
+BTS501,SL,5,0,
+BTS502,EL,20,1,
+BTS502,CL,6,0,

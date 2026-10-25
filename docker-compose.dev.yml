@@ -1,0 +1,75 @@
+# Local infrastructure in containers for people who don't want Homebrew Postgres/Redis: Postgres 16, Redis 7 and MinIO
+# (S3-compatible). Run the apps themselves with npm as usual. UNTESTED here (Docker isn't installed on the build
+# machine); validated for YAML syntax only. Every port binds to 127.0.0.1. Dev-only passwords — never reuse them.
+#
+#   docker compose -f docker-compose.dev.yml up -d
+#   # .env:
+#   #   DATABASE_URL=postgresql://hrm_app:hrm_app_dev@localhost:5432/hrm_dev
+#   #   DATABASE_URL_RUNTIME=postgresql://hrm_runtime:hrm_runtime_dev@localhost:5432/hrm_dev
+#   #   REDIS_URL=redis://localhost:6379
+#   #   FILES_STORAGE=s3 FILES_S3_BUCKET=northstar-dev FILES_S3_ENDPOINT=http://localhost:9000 FILES_S3_FORCE_PATH_STYLE=true
+#   #   FILES_S3_ACCESS_KEY_ID=northstar FILES_S3_SECRET_ACCESS_KEY=northstar-dev-secret
+#   npm run db:migrate && npm run db:seed && npm run db:seed:brands
+name: northstar-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_dev
+      POSTGRES_DB: postgres
+    ports: ["127.0.0.1:5432:5432"]
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      # Runs once on an empty data dir, in name order: owner role + database, runtime role, dev password.
+      - ./deploy/dev/01-owner.sql:/docker-entrypoint-initdb.d/01-owner.sql:ro
+      - ./db/runtime-role.sql:/docker-entrypoint-initdb.d/02-runtime-role.sql:ro
+      - ./deploy/dev/03-runtime-password.sql:/docker-entrypoint-initdb.d/03-runtime-password.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hrm_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["127.0.0.1:6379:6379"]
+    volumes: ["redis-data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: northstar
+      MINIO_ROOT_PASSWORD: northstar-dev-secret
+    ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
+    volumes: ["minio-data:/data"]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio-setup:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    depends_on: { minio: { condition: service_healthy } }
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        mc alias set local http://minio:9000 northstar northstar-dev-secret &&
+        mc mb --ignore-existing local/northstar-dev &&
+        mc version enable local/northstar-dev &&
+        mc anonymous set none local/northstar-dev
+
+volumes:
+  pg-data: {}
+  redis-data: {}
+  minio-data: {}

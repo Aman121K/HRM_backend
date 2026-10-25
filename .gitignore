@@ -1,0 +1,29 @@
+# --- secrets & local data (never commit) ---
+.env
+.env.*
+!.env.example
+!deploy/env.production.example
+.data/
+*.pem
+*.p8
+*.key
+*.keystore
+*.jks
+*.p12
+*.local.json
+
+# --- dependencies & build outputs ---
+node_modules/
+dist/
+dist-v2/
+*.tsbuildinfo
+coverage/
+
+# --- scratch / editor / OS ---
+scratch/
+.DS_Store
+npm-debug.log*
+*.log
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

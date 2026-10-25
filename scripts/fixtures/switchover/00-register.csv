@@ -1,0 +1,3 @@
+employee_number,full_name,work_email,department,designation,joining_date,manager_employee_number,role,status,location
+BTS501,Switch Test One,switch501@bluetokai.test,Operations,Barista,2025-06-01,BT001,EMPLOYEE,ACTIVE,Bengaluru — HQ
+BTS502,Switch Test Two,switch502@bluetokai.test,Finance,Accountant,2025-06-01,BT001,EMPLOYEE,ACTIVE,Bengaluru — HQ

@@ -1,0 +1,16 @@
+import { csv, hr, payroll, owner, ravi, log } from "./lib.mjs";
+import { as } from "./lib.mjs";
+const rows = (j) => j.rows?.map((x) => [x.row, x.employeeNumber, x.errors, x.warnings]) || j;
+let r = await payroll("POST", "/imports/leave-opening/dry-run", { csv: csv("03-leave-opening.csv") }); log("payroll leave dry-run (expect 403)", r, (j) => j.message);
+r = await hr("POST", "/imports/leave-opening/dry-run", { csv: csv("03-leave-opening-errors.csv") }); log("leave errors dry-run", r, rows);
+r = await hr("POST", "/imports/leave-opening/dry-run", { csv: csv("03-leave-opening.csv") }); log("leave dry-run", r, (j) => ({ summary: j.summary, options: j.options, totals: j.totals }));
+r = await hr("POST", "/imports/leave-opening/commit", { csv: csv("03-leave-opening.csv"), fileName: "03-leave-opening.csv" }); log("leave commit", r, (j) => ({ idempotent: j.idempotent, id: j.batch?.id, msg: j.message }));
+r = await hr("POST", "/imports/leave-opening/commit", { csv: csv("03-leave-opening.csv"), fileName: "03-leave-opening.csv" }); log("leave re-commit (idempotent)", r, (j) => ({ idempotent: j.idempotent }));
+r = await hr("POST", "/imports/leave-opening/commit", { csv: csv("03-leave-opening.csv"), batchKey: "leave-retry-0001" }); log("same rows under a new key (expect 400: already on file)", r, (j) => j.rows?.[0]?.errors || j.message);
+r = await as("blue-tokai", "BTS501")("GET", "/leave-types"); log("BTS501 leave-types shows imported balance", r, (j) => j.items?.filter((x) => x.opening_balance !== null).map((x) => [x.code, x.opening_balance, x.balance, x.balance_as_of]));
+r = await hr("GET", "/imports/leave-balances?employeeNumber=BTS502"); log("HR leave balances BTS502", r, (j) => j.items?.map((x) => [x.code, x.opening, x.taken_before_cutover, x.balance]));
+r = await hr("POST", "/imports/payroll-ytd/dry-run", { csv: csv("04-payroll-ytd.csv") }); log("HR YTD dry-run (expect 403)", r, (j) => j.message);
+r = await payroll("POST", "/imports/payroll-ytd/dry-run", { csv: csv("04-payroll-ytd-errors.csv") }); log("YTD errors dry-run", r, rows);
+r = await payroll("POST", "/imports/payroll-ytd/dry-run", { csv: csv("04-payroll-ytd.csv") }); log("YTD dry-run", r, (j) => ({ summary: j.summary, totals: j.totals, warn: j.rows.flatMap((x) => x.warnings) }));
+r = await payroll("POST", "/imports/payroll-ytd/commit", { csv: csv("04-payroll-ytd.csv"), fileName: "04-payroll-ytd.csv" }); log("YTD commit", r, (j) => ({ idempotent: j.idempotent, id: j.batch?.id, msg: j.message }));
+r = await payroll("POST", "/imports/payroll-ytd/commit", { csv: csv("04-payroll-ytd.csv"), fileName: "04-payroll-ytd.csv" }); log("YTD re-commit (idempotent)", r, (j) => ({ idempotent: j.idempotent }));

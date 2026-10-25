@@ -1,0 +1,5 @@
+employee_number,date_of_birth,gender,pan,ifsc,bank_account,state_code,manager_employee_number,tax_regime
+NOPE999,1990-01-01,MALE,,,,,,
+BTS501,2030-01-01,ROBOT,ABCDE12345,HDFC1234,12,K1,BTS501,OLDER
+BTS502,1990-02-30,,AQZPS5011K,,50100099990000,,,
+BTS502,1990-02-01,,AQZPS5011K,,,,,

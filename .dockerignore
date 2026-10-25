@@ -1,0 +1,20 @@
+# Never send secrets, local data or build outputs to the Docker build context.
+.env
+.env.*
+!.env.example
+.data
+node_modules
+**/node_modules
+dist
+dist-v2
+.git
+.github
+docs
+*.log
+*.local.json
+*.tsbuildinfo
+.DS_Store
+scratch
+coverage
+docker-compose*.yml
+Dockerfile*

@@ -1,0 +1,130 @@
+# Northstar People API (HRM_backend) CI. Every job is read-only towards the outside world (no deploys, no pushes to registries).
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  build-test:
+    name: Build + tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "${{ env.NODE_VERSION }}", cache: npm }
+      - run: npm ci --ignore-scripts
+      - name: Type-check + build
+        run: npm run build
+      - name: Tests (every src/**/*.test.ts)
+        run: npm test
+      - name: Scripts parse (node --check)
+        run: for f in scripts/*.mjs scripts/lib/*.mjs; do node --check "$f"; done
+      - name: Demo scripts refuse production
+        run: |
+          set +e
+          NODE_ENV=production node scripts/seed.mjs; test $? -eq 2 || { echo "seed.mjs ran with NODE_ENV=production"; exit 1; }
+          NODE_ENV=production node scripts/seed-brands.mjs; test $? -eq 2 || { echo "seed-brands.mjs ran with NODE_ENV=production"; exit 1; }
+
+  audit:
+    name: npm audit (production deps, fail on high)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "${{ env.NODE_VERSION }}" }
+      - run: npm audit --omit=dev --audit-level=high
+
+
+  migrations:
+    name: Fresh-install migrations (Postgres 16)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      PGPASSWORD: postgres
+      ADMIN_URL: postgresql://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "${{ env.NODE_VERSION }}", cache: npm }
+      - run: npm ci --ignore-scripts
+      - name: Postgres 16 client (pg_dump for the schema snapshot)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-16 || sudo apt-get install -y -qq postgresql-client
+          pg_dump --version
+      - name: Roles + empty database (as a DBA would on RDS)
+        run: |
+          psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -c "CREATE ROLE hrm_app LOGIN PASSWORD 'ci_owner' NOSUPERUSER NOCREATEDB NOCREATEROLE"
+          psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE hrm_ci OWNER hrm_app"
+          psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -f db/runtime-role.sql
+          psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -c "ALTER ROLE hrm_runtime PASSWORD 'ci_runtime'"
+      - name: Migrate from zero, re-run (no-op), verify checksums, compare schema snapshot
+        run: npm run ci:migrate-check
+        env:
+          DATABASE_URL: postgresql://hrm_app:ci_owner@localhost:5432/hrm_ci
+      - name: Production bootstrap is idempotent
+        env:
+          DATABASE_URL: postgresql://hrm_app:ci_owner@localhost:5432/hrm_ci
+        run: |
+          node scripts/bootstrap-production.mjs --email ci-admin@northstar-ci.test --name "CI Admin"
+          node scripts/bootstrap-production.mjs --email ci-admin@northstar-ci.test | grep -q '"grantedPlatformAdmin":false'
+      - name: Runtime role cannot bypass RLS or write platform tables
+        env:
+          RUNTIME_URL: postgresql://hrm_runtime:ci_runtime@localhost:5432/hrm_ci
+        run: |
+          test "$(psql "$RUNTIME_URL" -Atc "SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname=current_user")" = "f"
+          ! psql "$RUNTIME_URL" -c "INSERT INTO platform_admins(user_id) SELECT id FROM users LIMIT 1" 2>/dev/null
+          ! psql "$RUNTIME_URL" -c "UPDATE audit_log SET action='x'" 2>/dev/null
+
+  docker:
+    name: Docker images build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    needs: [build-test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build api / worker / migrate
+        run: |
+          for target in api worker migrate; do
+            docker buildx build -f Dockerfile --target "$target" --build-arg APP_VERSION="${GITHUB_SHA::12}" --build-arg GIT_SHA="$GITHUB_SHA" -t "northstar-$target:ci" --load .
+          done
+      - name: Images run as non-root
+        run: |
+          for image in northstar-api:ci northstar-worker:ci northstar-migrate:ci; do
+            user=$(docker image inspect -f '{{.Config.User}}' "$image"); echo "$image user=$user"; test "$user" = "node"
+          done
+      - name: Compose files are valid
+        run: |
+          mkdir -p ../frontend   # the web build context lives in the HRM_frontend repository
+          docker compose -f docker-compose.dev.yml config -q
+          REGISTRY=x DATABASE_URL=x DATABASE_URL_RUNTIME=x APP_DOMAIN=x APP_BASE_URL=x CORS_ORIGIN=x DATA_ENCRYPTION_KEYS=x \
+          DATA_ENCRYPTION_ACTIVE_KEY=x DATA_INDEX_KEY=x INTEGRATIONS_MASTER_KEY=x PAYOUTS_WEBHOOK_SECRET=x FILES_S3_BUCKET=x \
+          REDIS_PASSWORD=x AUTH_SIGNING_KEY=x AUTH_ISSUER=x NEXT_PUBLIC_PLATFORM_API_URL=x NEXT_PUBLIC_APP_DOMAIN=x \
+          docker compose -f docker-compose.prod.yml config -q

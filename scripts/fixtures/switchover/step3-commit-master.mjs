@@ -1,0 +1,11 @@
+import { csv, hr, gtHr, log } from "./lib.mjs";
+const body = { csv: csv("01-employee-master.csv"), fileName: "01-employee-master.csv" };
+let r = await hr("POST", "/imports/employee-master/commit", body); log("master commit", r, (j) => ({ idempotent: j.idempotent, id: j.batch?.id, rows: j.batch?.totalRows, msg: j.message }));
+const id = r.j.batch?.id;
+r = await hr("POST", "/imports/employee-master/commit", body); log("master re-commit same file (idempotent)", r, (j) => ({ idempotent: j.idempotent, sameBatch: j.batch?.id === id }));
+r = await hr("POST", "/imports/employee-master/dry-run", body); log("dry-run after commit", r, (j) => ({ summary: j.summary, alreadyCommitted: j.alreadyCommitted?.id === id }));
+r = await gtHr("GET", "/imports/batches"); log("got-tea HR batch list (expect no BT batches)", r, (j) => j.items?.map((x) => x.id));
+r = await gtHr("GET", `/imports/batches/${id}`); log("got-tea HR reads BT batch (expect 404)", r, (j) => j.message);
+r = await gtHr("POST", `/imports/batches/${id}/undo`, {}); log("got-tea HR undo BT batch (expect 404)", r, (j) => j.message);
+r = await hr("GET", `/imports/batches/${id}`); log("BT HR batch detail", r, (j) => ({ status: j.status, changes: j.changes?.map((c) => [c.table, c.action, c.employeeNumber]) }));
+console.log("BATCH", id);
