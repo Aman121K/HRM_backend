@@ -100,7 +100,7 @@ export class BillingService implements OnModuleInit {
     const pick = (column: string, envKey: string, fallback = "") => ({ value: (row?.[column] || env[envKey] || fallback) as string, source: row?.[column] ? "settings" : env[envKey] ? "env" : fallback ? "default" : "missing" });
     const legalName = pick("legal_name", "OPERATOR_LEGAL_NAME"), gstin = pick("gstin", "OPERATOR_GSTIN"), address = pick("address", "OPERATOR_ADDRESS"), state = pick("state_code", "OPERATOR_STATE", "KA");
     return {
-      legalName: legalName.value, tradeName: (row?.trade_name || env.OPERATOR_TRADE_NAME || "Northstar People") as string, gstin: gstin.value,
+      legalName: legalName.value, tradeName: (row?.trade_name || env.OPERATOR_TRADE_NAME || "ClanChief") as string, gstin: gstin.value,
       pan: (row?.pan || env.OPERATOR_PAN || "") as string, address: address.value, stateCode: state.value, email: (row?.email || env.OPERATOR_EMAIL || "") as string,
       phone: (row?.phone || "") as string, sacCode: row.sac_code as string, gstRate: Number(row.gst_rate), invoicePrefix: row.invoice_prefix as string,
       creditNotePrefix: row.credit_note_prefix as string, paymentTermsDays: Number(row.payment_terms_days), bankDetails: (row.bank_details || env.OPERATOR_BANK_DETAILS || "") as string,
@@ -766,7 +766,7 @@ export class BillingService implements OnModuleInit {
           const to = await this.recipients(account);
           await this.email(brand.organizationId, to, `Action needed: ${brand.name} will be suspended on ${suspendOn}`,
             `<p>Hello,</p><p>Invoice <b>${escapeHtml(invoice.number)}</b> (INR ${escapeHtml(formatInr(invoice.outstandingPaise))} outstanding) is ${escapeHtml(daysOverdue)} days overdue.</p>` +
-            `<p>If it is not paid by <b>${escapeHtml(suspendOn)}</b>, access to <b>${escapeHtml(brand.name)}</b> on Northstar will be paused. No data is deleted, and access is restored as soon as the payment is recorded.</p>` +
+            `<p>If it is not paid by <b>${escapeHtml(suspendOn)}</b>, access to <b>${escapeHtml(brand.name)}</b> on ClanChief will be paused. No data is deleted, and access is restored as soon as the payment is recorded.</p>` +
             emailButton("View invoices", "/settings/billing"));
           await this.audit(actor, account, "BILLING_SUSPENSION_WARNING", "organization", brand.organizationId, null, { invoice: invoice.number, suspendOn, daysOverdue }, brand.organizationId);
           warned.push({ brand: brand.name, suspendOn });

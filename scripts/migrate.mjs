@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Northstar HRM migration runner.
+// ClanChief migration runner.
 //
 //   npm run db:migrate                      apply pending migrations/NNN_*.sql (as DATABASE_URL = owner role)
 //   node scripts/migrate.mjs --status   list applied/pending, verify checksums, change nothing

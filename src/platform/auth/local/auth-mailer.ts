@@ -29,8 +29,8 @@ export class AuthMailer {
         this.logger.warn(`Outbox nudge failed (the periodic sweep will send it): ${(error as Error).message}`));
       return;
     }
-    const from = process.env.MAIL_FROM || "Northstar People <no-reply@northstar.local>";
-    const body = renderEmail({ subject: safeSubject, html, organizationName: "Northstar Platform" });
+    const from = process.env.MAIL_FROM || "ClanChief <no-reply@northstar.local>";
+    const body = renderEmail({ subject: safeSubject, html, organizationName: "ClanChief Platform" });
     const text = `${safeSubject}\n\n${htmlToText(html)}`;
     if (process.env.SMTP_HOST) {
       const transport = nodemailer.createTransport({

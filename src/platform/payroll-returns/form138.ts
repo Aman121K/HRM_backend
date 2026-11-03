@@ -133,7 +133,7 @@ export function buildForm138Text(input: { fyStart: number; quarter: Quarter; ded
   const used = input.challans.filter((c) => input.deductees.some((x) => x.challanId === c.id));
   const lines: string[] = [];
   let n = 0;
-  lines.push(record(18, { 1: ++n, 2: "FH", 3: "SL1", 4: "R", 5: ddmmyyyy(input.createdOn), 6: 1, 7: "D", 8: d.tan, 9: 1, 10: clean(input.software || "Northstar HRM", 75) }));
+  lines.push(record(18, { 1: ++n, 2: "FH", 3: "SL1", 4: "R", 5: ddmmyyyy(input.createdOn), 6: 1, 7: "D", 8: d.tan, 9: 1, 10: clean(input.software || "ClanChief", 75) }));
   const batchTotal = used.reduce((t, c) => t + Math.round(challanTotal(c)), 0);
   lines.push(record(72, {
     1: ++n, 2: "BH", 3: 1, 4: used.length, 5: "138", 9: input.previousToken || undefined, 13: d.tan, 15: d.pan,

@@ -1,4 +1,4 @@
-# Northstar People API (HRM_backend) CI. Every job is read-only towards the outside world (no deploys, no pushes to registries).
+# ClanChief API (HRM_backend) CI. Every job is read-only towards the outside world (no deploys, no pushes to registries).
 name: ci
 
 on:

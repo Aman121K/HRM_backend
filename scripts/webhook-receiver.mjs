@@ -1,4 +1,4 @@
-// Tiny local receiver for Northstar outgoing webhooks — shows how a subscriber verifies our signature.
+// Tiny local receiver for ClanChief outgoing webhooks — shows how a subscriber verifies our signature.
 //   node scripts/webhook-receiver.mjs --secret whsec_… [--port 4298] [--fail]
 // Point a subscription at http://localhost:4298/hooks (plain http is accepted for localhost in development).
 // Verification: signature = hex HMAC-SHA256(secret, `${x-northstar-timestamp}.${raw body}`), sent as "v1=<hex>";

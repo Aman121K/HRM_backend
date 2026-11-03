@@ -96,7 +96,7 @@ await create("employee", "assets", { category: "Uniform kit", title: "Replacemen
 // Learning
 const course = await create("employee", "learning", { title: "SCA Barista Skills — Intermediate", category: "Coffee craft", provider: "Specialty Coffee Association", startDate: day(20), endDate: day(22), amount: 18500, description: "Improves milk texturing and calibration so I can train new joiners at our store." });
 await move("manager", course, "approve");
-await create("manager", "learning", { title: "First-time managers programme", category: "Leadership", provider: "Northstar Academy", startDate: day(30), description: "Structured coaching and feedback practice for my five store managers." });
+await create("manager", "learning", { title: "First-time managers programme", category: "Leadership", provider: "ClanChief Academy", startDate: day(30), description: "Structured coaching and feedback practice for my five store managers." });
 
 // Shifts
 await create("employee", "shifts", { category: "Closing · 15:00–23:00", startDate: day(3), endDate: day(4), subjectEmployeeId: directory.get("BT004"), title: "College exam on Thursday morning — swapping with Arjun" });

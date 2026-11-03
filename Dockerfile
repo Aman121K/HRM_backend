@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-# Northstar platform API, jobs worker and one-shot migration job — one build, three targets:
+# ClanChief platform API, jobs worker and one-shot migration job — one build, three targets:
 #   docker build -f Dockerfile --target api     -t northstar-api .
 #   docker build -f Dockerfile --target worker  -t northstar-worker .
 #   docker build -f Dockerfile --target migrate -t northstar-migrate .

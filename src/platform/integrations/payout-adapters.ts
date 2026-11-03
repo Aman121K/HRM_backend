@@ -34,14 +34,14 @@ const rupees = (paise: number) => (paise / 100).toFixed(2);
 const clean = (value: string, max: number) => value.replace(/[|,"\r\n\t]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 
 /**
- * Northstar generic H2H format v1 (pipe-delimited, UTF-8, CRLF):
+ * ClanChief generic H2H format v1 (pipe-delimited, UTF-8, CRLF):
  *   H|NSH2H1|<batch ref>|<debit account>|<value date YYYYMMDD>|<mode>|<record count>|<total amount 0.00>
  *   D|<seq>|<payment ref>|<beneficiary name ≤40>|<account no>|<IFSC>|<amount 0.00>|<mode>|<narration ≤30>
  *   T|<record count>|<total amount 0.00>|<SHA-256 hex of all D lines joined by CRLF>
  * The trailer hash lets the bank (or our own re-check) detect tampering between release and upload.
  */
 export const genericH2H: FileAdapter = {
-  kind: "FILE", key: "H2H_GENERIC", label: "Host-to-host file (Northstar generic v1)",
+  kind: "FILE", key: "H2H_GENERIC", label: "Host-to-host file (ClanChief generic v1)",
   description: "Pipe-delimited bulk payment file with header, detail and hash-sealed trailer records.",
   configured: () => ({ configured: true, detail: "No credentials needed — files are downloaded after release." }),
   build(batch) {

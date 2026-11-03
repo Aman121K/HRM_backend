@@ -332,7 +332,7 @@ export async function reviewSalary(client: PoolClient, identity: AuthIdentity, c
     else {
       if (effectiveFrom < employee.joining_date) errors.push(`Cannot start before the joining date (${employee.joining_date})`);
       if (!effectiveFrom.endsWith("-01") && effectiveFrom !== employee.joining_date) errors.push("Must be the 1st of a month or the joining date");
-      if (locked && effectiveFrom.slice(0, 7) <= locked) errors.push(`Payroll is published in Northstar through ${monthLabel(locked)} — the structure must start after that`);
+      if (locked && effectiveFrom.slice(0, 7) <= locked) errors.push(`Payroll is published in ClanChief through ${monthLabel(locked)} — the structure must start after that`);
       if (pending && effectiveFrom.slice(0, 7) <= pending) errors.push(`The ${monthLabel(pending)} run is awaiting approval — send it back first`);
       const key = `${employee.id}|${effectiveFrom}`;
       if (seen.has(key)) errors.push("Same employee and effective date appear twice in this file");
@@ -440,7 +440,7 @@ export async function reviewLeave(client: PoolClient, identity: AuthIdentity, cs
       seen.add(key);
       if (openings.has(key)) errors.push(`An opening balance for ${code} is already on file${openings.get(key) ? " from an earlier import — undo that batch first" : ""}`);
       const after = (approvedAfter.get(key) || []).filter((leave) => leave.start > asOf).reduce((sum, leave) => sum + leave.days, 0);
-      if (after > 0 && !errors.length) warnings.push(`${after} day(s) approved in Northstar after ${asOf} will be deducted from this balance`);
+      if (after > 0 && !errors.length) warnings.push(`${after} day(s) approved in ClanChief after ${asOf} will be deducted from this balance`);
       if (opening !== null && opening !== undefined) changes.balanceAfterNorthstarLeave = Math.round((opening - after) * 100) / 100;
     }
     Object.assign(changes, { leaveType: code, opening, taken, asOf });
@@ -500,7 +500,7 @@ export async function reviewYtd(client: PoolClient, identity: AuthIdentity, csv:
       if (overlap) errors.push(`Overlaps row ${overlap.row} for the same employee`);
       mine.push({ from, to, row: line.row }); spans.set(employee.id, mine);
       const clash = paidHere.find((paid) => paid.employee_id === employee.id && paid.period >= from && paid.period <= to);
-      if (clash) errors.push(`${monthLabel(clash.period)} was already paid by Northstar (${clash.status.toLowerCase()} run) — it would be counted twice`);
+      if (clash) errors.push(`${monthLabel(clash.period)} was already paid by ClanChief (${clash.status.toLowerCase()} run) — it would be counted twice`);
     }
     if (existing.has(employee.id)) errors.push(`Year-to-date for FY ${fy.fyLabel} is already imported for ${number} — undo that batch first`);
     const amounts = {} as YtdAmounts;
@@ -521,7 +521,7 @@ export async function reviewYtd(client: PoolClient, identity: AuthIdentity, csv:
       if (amounts.esi_employee > 0 && amounts.gross / months > 25_000) warnings.push("ESI deducted although average monthly gross is above the ESI wage limit (continues to the end of the contribution period)");
       if (amounts.gross > 0 && amounts.gross / months > 2_500_000) warnings.push("Average monthly gross above ₹25 lakh — check the figures");
       const later = paidHere.filter((paid) => paid.employee_id === employee.id && paid.period > lastPaid);
-      if (later.length) warnings.push(`Northstar runs after ${lastPaid} already computed TDS without these figures; the next run trues up the remaining TDS`);
+      if (later.length) warnings.push(`ClanChief runs after ${lastPaid} already computed TDS without these figures; the next run trues up the remaining TDS`);
       Object.assign(changes, { period: from === to ? monthLabel(from) : `${from} … ${to}`, months, gross: amounts.gross, taxable: amounts.gross - amounts.exempt_allowances, tds: amounts.tds, pf: amounts.pf_employee + amounts.vpf });
     }
     finish(item, true, false);

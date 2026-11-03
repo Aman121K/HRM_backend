@@ -72,6 +72,13 @@ export class ReturnsController {
   @Get("certificates/:fy") @Roles(...PAYROLL_ROLES)
   certificates(@Req() request: FastifyRequest, @Param("fy", ParseIntPipe) fy: number) { return this.returns.listDocuments(request.identity!, fyParam(fy)); }
 
+  @Get("certificates/:fy/bulk") @Roles(...PAYROLL_ROLES) @Header("cache-control", "private, no-store") @Header("x-content-type-options", "nosniff")
+  @ApiOperation({ summary: "ZIP of every generated certificate + perquisite statement for the year" })
+  async bulk(@Req() request: FastifyRequest, @Param("fy", ParseIntPipe) fy: number) {
+    const file = await this.returns.bulkDocuments(request.identity!, fyParam(fy));
+    return attachment(file.bytes, file.type, file.name);
+  }
+
   @Post("certificates/:fy/generate") @Roles(...PAYROLL_ROLES) @ApiOperation({ summary: "Generate the next batch of annual certificates; repeat until status is GENERATED" })
   generate(@Req() request: FastifyRequest, @Param("fy", ParseIntPipe) fy: number, @Body() input: GenerateDto) { return this.returns.generate(request.identity!, fyParam(fy), Boolean(input.restart)); }
 

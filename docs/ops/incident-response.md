@@ -1,6 +1,6 @@
 # Incident response
 
-For outages, security incidents and personal-data breaches affecting Northstar HRM. Keep this page printed/offline
+For outages, security incidents and personal-data breaches affecting ClanChief. Keep this page printed/offline
 too — it must be usable when the app or SSO is down.
 
 > **Legal timelines below must be confirmed with counsel** before go-live and re-checked yearly. They summarise the
@@ -66,10 +66,10 @@ send what you know — it can be updated later. Also required: keep **logs of al
   data breach. Under the DPDP Rules as notified, an intimation goes to the Board **without delay**, followed by a
   detailed report **within 72 hours** of becoming aware (or longer if the Board allows) — **confirm the current rule
   text and timelines with counsel**.
-- **Who is the fiduciary?** For employee data, each **customer brand (the employer) is the Data Fiduciary**; Northstar
+- **Who is the fiduciary?** For employee data, each **customer brand (the employer) is the Data Fiduciary**; ClanChief
   is their **Data Processor**. Our contracts/DPAs must say how fast we tell them (target: **within 24 hours**, earlier
   for SEV-1) so they can meet their own obligations. Where we act for ourselves (our own staff, billing contacts),
-  Northstar is the fiduciary.
+  ClanChief is the fiduciary.
 - Content for affected people (plain language): what happened, when, what data, likely consequences, what we did,
   what they should do, contact of the DPO/grievance officer.
 - Report to the Board (detailed): nature/extent/timing/location, cause, mitigation, findings about the person

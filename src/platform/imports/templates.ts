@@ -56,7 +56,7 @@ export const COLUMNS: Record<Exclude<ImportKind, "PAYSLIPS">, Column[]> = {
   ],
   SALARY: [
     { name: "employee_number", required: true, example: "BT003", help: "Existing employee number." },
-    { name: "effective_from", required: true, example: "2026-04-01", help: "YYYY-MM-DD. The 1st of a month or the joining date; not inside a month already published in Northstar." },
+    { name: "effective_from", required: true, example: "2026-04-01", help: "YYYY-MM-DD. The 1st of a month or the joining date; not inside a month already published in ClanChief." },
     { name: "annual_ctc", required: true, example: "600000", help: "Annual cost to company in rupees (fixed + variable)." },
     { name: "basic_pct", required: false, example: "50", help: "Basic as % of monthly fixed pay (30–80). Default 50." },
     { name: "hra_pct", required: false, example: "40", help: "HRA as % of Basic (0–50). Default 50 for metro cities, 40 otherwise." },
@@ -70,10 +70,10 @@ export const COLUMNS: Record<Exclude<ImportKind, "PAYSLIPS">, Column[]> = {
   ],
   LEAVE_OPENING: [
     { name: "employee_number", required: true, example: "BT003", help: "Existing employee number." },
-    { name: "leave_type_code", required: true, example: "EL", help: "Leave type code as configured in Northstar (e.g. CL, SL, EL)." },
+    { name: "leave_type_code", required: true, example: "EL", help: "Leave type code as configured in ClanChief (e.g. CL, SL, EL)." },
     { name: "opening_balance", required: true, example: "12.5", help: "Balance available on the cut-over date (after leave already taken), in days; halves allowed." },
     { name: "taken_this_year", required: false, example: "3", help: "Optional: days of this type already taken this leave year in the old system (for reports; not deducted again)." },
-    { name: "as_of_date", required: false, example: "2026-09-30", help: "YYYY-MM-DD. Blank = the cut-over date set on the checklist. Leave approved in Northstar after this date reduces the balance." },
+    { name: "as_of_date", required: false, example: "2026-09-30", help: "YYYY-MM-DD. Blank = the cut-over date set on the checklist. Leave approved in ClanChief after this date reduces the balance." },
   ],
   PAYROLL_YTD: [
     { name: "employee_number", required: true, example: "BT003", help: "Existing employee number." },
@@ -81,7 +81,7 @@ export const COLUMNS: Record<Exclude<ImportKind, "PAYSLIPS">, Column[]> = {
     { name: "to_period", required: true, example: "2026-08", help: "YYYY-MM — last month covered (≤ the last month paid by the old system). Use one row per month for month-wise history, or one row for the whole period." },
     { name: "gross", required: true, example: "250000", help: money("Total earnings paid (Basic + HRA + all allowances + bonus)") },
     { name: "basic", required: false, example: "125000", help: money("Basic (+DA) paid") },
-    { name: "hra", required: false, example: "50000", help: money("HRA paid (do NOT subtract the HRA exemption — Northstar computes it for the year)") },
+    { name: "hra", required: false, example: "50000", help: money("HRA paid (do NOT subtract the HRA exemption — ClanChief computes it for the year)") },
     { name: "other_taxable", required: false, example: "75000", help: money("Other taxable earnings (special allowance, bonus, arrears …)") },
     { name: "exempt_allowances", required: false, example: "0", help: money("Non-taxable components included in gross (tax-free reimbursements, LTA claimed …)") },
     { name: "pf_employee", required: false, example: "15000", help: money("Employee PF deducted (12%)") },

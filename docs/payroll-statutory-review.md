@@ -1,4 +1,4 @@
-# Northstar HRM — Payroll Statutory Review Pack (FY 2026-27 / Tax Year 2026-27)
+# ClanChief — Payroll Statutory Review Pack (FY 2026-27 / Tax Year 2026-27)
 
 Prepared: 20 Oct 2026 (sources checked 19–20 Oct 2026) · Engine rule versions: `IT-FY2026-27.2`, `PF-2026.09`, `ESI-2019.07`, `LC-2025.11`
 

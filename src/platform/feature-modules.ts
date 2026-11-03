@@ -24,4 +24,6 @@ import { PayrollReturnsModule } from "./payroll-returns/returns.module";
 import { BillingModule } from "./billing/billing.module";
 import { NativeAuthModule } from "./auth/local/native-auth.module";
 import { PrivacyModule } from "./privacy/privacy.module";
-export const FEATURE_MODULES = [SecurityModule, FilesModule, JobsModule, AttendanceModule, AccessModule, IntegrationsModule, PayrollModule, EngagementModule, RosterModule, LmsModule, OnboardingModule, AnalyticsModule, ReceiptsModule, NotificationsModule, RiskModule, ComplianceModule, TaxModule, PeopleAdminModule, OpsModule, ImportsModule, PayrollReturnsModule, BillingModule, NativeAuthModule, PrivacyModule];
+import { LoansModule } from "./loans/loans.module";
+import { PerformanceModule } from "./performance/performance.module";
+export const FEATURE_MODULES = [SecurityModule, FilesModule, JobsModule, AttendanceModule, AccessModule, IntegrationsModule, PayrollModule, EngagementModule, RosterModule, LmsModule, OnboardingModule, AnalyticsModule, ReceiptsModule, NotificationsModule, RiskModule, ComplianceModule, TaxModule, PeopleAdminModule, OpsModule, ImportsModule, PayrollReturnsModule, BillingModule, NativeAuthModule, PrivacyModule, LoansModule, PerformanceModule];

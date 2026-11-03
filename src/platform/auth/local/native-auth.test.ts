@@ -13,7 +13,7 @@ test("HOTP/TOTP match RFC 4226 / RFC 6238 test vectors", () => {
   assert.equal(matchTotp(b32, "287082", 89_000, 1), 1); // one step late is tolerated
   assert.equal(matchTotp(b32, "287082", 119_000, 1), null); // two steps late is not
   assert.equal(matchTotp(b32, "28708", 59_000), null);
-  assert.match(otpauthUrl(b32, "a@b.example"), /^otpauth:\/\/totp\/Northstar%20People:a%40b.example\?secret=/);
+  assert.match(otpauthUrl(b32, "a@b.example"), /^otpauth:\/\/totp\/ClanChief:a%40b.example\?secret=/);
 });
 
 test("recovery codes are 80-bit and normalise", () => {

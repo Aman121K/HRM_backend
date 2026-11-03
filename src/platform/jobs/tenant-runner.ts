@@ -50,7 +50,7 @@ export class TenantJobRunner {
     if (this.systemUser) return this.systemUser;
     const found = (await this.database.systemQuery(`SELECT id FROM users WHERE email=$1`, [SYSTEM_USER_EMAIL])).rows[0];
     const row = found || (await this.database.systemQuery(
-      `INSERT INTO users(email,full_name,oidc_issuer,oidc_subject) VALUES($1,'Northstar Automation','urn:northstar:system','automation')
+      `INSERT INTO users(email,full_name,oidc_issuer,oidc_subject) VALUES($1,'ClanChief Automation','urn:northstar:system','automation')
        ON CONFLICT (email) DO UPDATE SET email=EXCLUDED.email RETURNING id`, [SYSTEM_USER_EMAIL])).rows[0];
     this.systemUser = row.id as string;
     return this.systemUser;

@@ -1,4 +1,4 @@
-# Northstar People — Platform API
+# ClanChief — Platform API
 
 Multi-brand HRM platform API: NestJS 11 + Fastify 5, PostgreSQL 16 with row-level security per brand, Redis + BullMQ
 jobs worker. The web app ([HRM_frontend](https://github.com/Aman121K/HRM_frontend)) and the mobile app
@@ -6,7 +6,7 @@ jobs worker. The web app ([HRM_frontend](https://github.com/Aman121K/HRM_fronten
 
 ## Repositories
 
-Northstar People is split into four repositories:
+ClanChief is split into four repositories:
 
 | Repository | What it is |
 |---|---|

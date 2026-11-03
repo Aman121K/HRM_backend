@@ -12,7 +12,7 @@ export type ExpenseInput = {
 };
 
 export const EXPENSE_SKIPPED: SkippedCheck[] = [
-  { key: "expenses.holidays", area: "expenses", label: "Claims on public holidays", reason: "Not checked: there is no holiday calendar in Northstar yet. Weekly offs from the roster (or Saturday/Sunday for people without a roster) are checked instead." },
+  { key: "expenses.holidays", area: "expenses", label: "Claims on public holidays", reason: "Not checked: there is no holiday calendar in ClanChief yet. Weekly offs from the roster (or Saturday/Sunday for people without a roster) are checked instead." },
 ];
 
 const claimHref = (claim: Claim) => `/expenses?case=${claim.id}`;

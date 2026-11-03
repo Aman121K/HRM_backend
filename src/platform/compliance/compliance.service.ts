@@ -386,7 +386,7 @@ export class ComplianceService implements OnModuleInit {
     const evidence = (await this.database.systemQuery(`SELECT DISTINCT ON (check_id) check_id AS "checkId", title, result, detail, data, sha256, collected_at AS "collectedAt"
         FROM compliance_evidence WHERE source='automated' ORDER BY check_id, collected_at DESC`)).rows;
     const body = {
-      generatedAt: new Date().toISOString(), generatedBy: admin, product: "Northstar People", environment: this.config.nodeEnv,
+      generatedAt: new Date().toISOString(), generatedBy: admin, product: "ClanChief", environment: this.config.nodeEnv,
       framework: { id: framework, name: overview.name }, readiness: overview.readiness, counts: overview.counts,
       controls: overview.controls.map((control) => ({ id: control.id, title: control.title, theme: control.theme, description: control.description, status: control.status,
         owner: control.state.owner, implementationNotes: control.state.notes, automatedChecks: control.checkResults, manualEvidence: manual.filter((row) => row.controlId === control.id) })),

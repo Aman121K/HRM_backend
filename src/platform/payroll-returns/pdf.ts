@@ -117,7 +117,7 @@ export class PdfDocument {
       const specId = add(`<< /Type /Filespec /F (${name}) /UF (${name}) /Desc (${escapeString(attachment.description || attachment.name)}) /EF << /F ${streamId} 0 R >> >>`);
       fileSpecs.push(`(${name}) ${specId} 0 R`);
     }
-    const infoId = add(`<< /Title (${escapeString(this.meta.title)}) /Subject (${escapeString(this.meta.subject || "")}) /Author (${escapeString(this.meta.author || "")}) /Producer (Northstar HRM) >>`);
+    const infoId = add(`<< /Title (${escapeString(this.meta.title)}) /Subject (${escapeString(this.meta.subject || "")}) /Author (${escapeString(this.meta.author || "")}) /Producer (ClanChief) >>`);
     objects[pagesId - 1] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageIds.length} >>`;
     objects[catalogId - 1] = `<< /Type /Catalog /Pages ${pagesId} 0 R${fileSpecs.length ? ` /Names << /EmbeddedFiles << /Names [${fileSpecs.join(" ")}] >> >> /PageMode /UseAttachments` : ""} >>`;
 

@@ -1,8 +1,8 @@
-# Northstar HRM product and architecture roadmap
+# ClanChief product and architecture roadmap
 
 ## Product decision
 
-Northstar will be a modular, multi-tenant HRM. Organizations enable only the modules they purchase. The first production release is the core system of record and employee/manager workflow platform; advanced talent, recruitment, payroll compliance, and AI are later releases built on the same identity, workflow, document, notification, and audit foundations.
+ClanChief will be a modular, multi-tenant HRM. Organizations enable only the modules they purchase. The first production release is the core system of record and employee/manager workflow platform; advanced talent, recruitment, payroll compliance, and AI are later releases built on the same identity, workflow, document, notification, and audit foundations.
 
 The attached 24-module checklist is the target product catalogue, not one release.
 
@@ -47,7 +47,7 @@ The attached 24-module checklist is the target product catalogue, not one releas
 - Keep UI code in `src/`; no database or server-domain imports.
 - Use a typed API client generated from OpenAPI.
 - Use TanStack Query (or equivalent) for server state, retries, cache invalidation and loading/error behavior.
-- Maintain the existing Northstar design system and accessible right-drawer pattern.
+- Maintain the existing ClanChief design system and accessible right-drawer pattern.
 
 ### Backend
 

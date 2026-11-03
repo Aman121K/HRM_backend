@@ -99,7 +99,7 @@ async function bootstrap() {
     done();
   });
   if (config.nodeEnv !== "production" || process.env.EXPOSE_OPENAPI === "true") {
-    const openApi = new DocumentBuilder().setTitle("Northstar HRM API").setDescription("Modular tenant-scoped HRM platform API").setVersion("2.0").addBearerAuth().build();
+    const openApi = new DocumentBuilder().setTitle("ClanChief API").setDescription("Modular tenant-scoped HRM platform API").setVersion("2.0").addBearerAuth().build();
     const document = SwaggerModule.createDocument(app, openApi);
     app.getHttpAdapter().get("/api/openapi.json", (_request: unknown, reply: { send: (value: unknown) => void }) => reply.send(document));
   }

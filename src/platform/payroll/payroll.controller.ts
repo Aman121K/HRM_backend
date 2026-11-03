@@ -10,7 +10,7 @@ import { PAYROLL_ROLES } from "./payroll.shared";
 import { PayrollService } from "./payroll.service";
 import { RunsService } from "./runs.service";
 
-const EXPORTS = ["bank", "pf-ecr", "esi", "pt", "register"];
+const EXPORTS = ["bank", "pf-ecr", "esi", "pt", "lwf", "register"];
 
 @ApiTags("payroll") @ApiBearerAuth() @Controller("api/v2/payroll")
 export class PayrollController {
@@ -101,7 +101,7 @@ export class PayrollController {
   }
 
   @Get("runs/:id/exports/:kind") @Roles(...PAYROLL_ROLES) @Header("cache-control", "private, no-store") @Header("x-content-type-options", "nosniff")
-  @ApiOperation({ summary: "bank | pf-ecr | esi | pt | register" })
+  @ApiOperation({ summary: "bank | pf-ecr | esi | pt | lwf | register" })
   async export(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply, @Param("id", ParseUUIDPipe) id: string, @Param("kind") kind: string) {
     if (!EXPORTS.includes(kind)) throw new NotFoundException("Unknown export.");
     const file = await this.runs.exportFile(request.identity!, id, kind);

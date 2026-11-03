@@ -139,7 +139,7 @@ export class WebhooksService {
       if (sub.status !== "ACTIVE") throw new ConflictException("Enable the subscription before sending a test event.");
       const event = (await client.query(
         `INSERT INTO webhook_events(organization_id,event_type,entity_type,entity_id,payload) VALUES($1,$2,'webhook_subscription',$3,$4) RETURNING id`,
-        [identity.organizationId, sub.event_types[0], subscriptionId, JSON.stringify({ test: true, message: "Test event from Northstar HRM. Verify the signature, then return any 2xx.", sentBy: identity.employeeId })])).rows[0];
+        [identity.organizationId, sub.event_types[0], subscriptionId, JSON.stringify({ test: true, message: "Test event from ClanChief. Verify the signature, then return any 2xx.", sentBy: identity.employeeId })])).rows[0];
       const delivery = (await client.query(
         `INSERT INTO webhook_deliveries(organization_id,subscription_id,event_id,is_test) VALUES($1,$2,$3,true) RETURNING id`,
         [identity.organizationId, subscriptionId, event.id])).rows[0];

@@ -3,7 +3,7 @@ import { dayLabel, daysBetween, inr, plural, round, type SignalDraft } from "./r
 import type { RiskSettings } from "./risk.settings";
 
 export const ETHICS_NOTE =
-  "This is a prompt to check in, not a prediction or a judgement. It uses only facts visible in Northstar (tenure, requests declined, overdue onboarding tasks, days with attendance) — never resignation-intent guesses, personal characteristics or private messages. It is visible only to HR and the person's direct manager. Do not use it for performance, pay or disciplinary decisions.";
+  "This is a prompt to check in, not a prediction or a judgement. It uses only facts visible in ClanChief (tenure, requests declined, overdue onboarding tasks, days with attendance) — never resignation-intent guesses, personal characteristics or private messages. It is visible only to HR and the person's direct manager. Do not use it for performance, pay or disciplinary decisions.";
 
 export type Joiner = { id: string; joiningDate: string };
 export type PeopleInput = {

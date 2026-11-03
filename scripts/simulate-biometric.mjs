@@ -1,5 +1,5 @@
 import './lib/dev-only.mjs'; // refuses to run in production — see the file
-// Biometric device simulator for Northstar HRM integrations.
+// Biometric device simulator for ClanChief integrations.
 // Sends realistic punches the way a device (or an eSSL/Mantra middleware bridge) would:
 //   json mode — POST /api/v2/integrations/devices/punches, signed with HMAC-SHA256(secret, `${timestamp}.${body}`)
 //   adms mode — ZKTeco/eSSL ADMS push: GET /iclock/cdata handshake, then POST table=ATTLOG as tab-separated text

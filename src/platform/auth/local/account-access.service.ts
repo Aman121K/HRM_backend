@@ -103,7 +103,7 @@ export class AccountAccessService {
     const membership = (await client.query(`SELECT status FROM organization_memberships WHERE organization_id=$1 AND user_id=$2`, [identity.organizationId, userId])).rows[0];
     if (membership.status !== "ACTIVE") throw new BadRequestException("This person's access to the workspace is revoked. Restore it before inviting.");
     const user = (await client.query(`SELECT password_hash IS NOT NULL AS has_password, oidc_subject IS NOT NULL AS sso, full_name FROM users WHERE id=$1`, [userId])).rows[0];
-    if (user.has_password) throw new ConflictException("This person already has a Northstar login — they can sign in with their existing password.");
+    if (user.has_password) throw new ConflictException("This person already has a ClanChief login — they can sign in with their existing password.");
     const live = (await client.query(
       `SELECT id FROM auth_invites WHERE user_id=$1 AND organization_id=$2 AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > now()`, [userId, identity.organizationId])).rows;
     if (live.length && !replace) throw new ConflictException("An invitation is already pending.");
@@ -120,8 +120,8 @@ export class AccountAccessService {
 
   private async sendInvite(input: { raw: string; email: string; fullName: string; organizationId: string | null; slug: string | null; brandName: string }) {
     const link = brandWebUrl(input.slug, `/activate?token=${encodeURIComponent(input.raw)}`);
-    await this.mailer.send(input.organizationId, input.email, `You're invited to ${input.brandName} on Northstar People`,
-      paragraphs(`Hi ${input.fullName},`, `${input.brandName} has invited you to Northstar People — where you'll see your attendance, leave, payslips and requests.`,
+    await this.mailer.send(input.organizationId, input.email, `You're invited to ${input.brandName} on ClanChief`,
+      paragraphs(`Hi ${input.fullName},`, `${input.brandName} has invited you to ClanChief — where you'll see your attendance, leave, payslips and requests.`,
         "Set your password and secure your account with the button below.")
       + emailButton("Set up my account", link)
       + paragraphs(`This link works once and expires in ${INVITE_HOURS} hours.`, "If you weren't expecting this invitation, you can ignore this email."));
@@ -170,7 +170,7 @@ export class AccountAccessService {
     const user = (await this.database.systemQuery(`SELECT email, full_name FROM users WHERE id=$1`, [userId])).rows[0];
     const brand = organizationIds?.[0] || null;
     await this.mailer.send(brand, user.email, "Your sign-in verification was reset",
-      paragraphs(`Hi ${user.full_name},`, "An administrator reset the authenticator app on your Northstar account and signed you out everywhere.",
+      paragraphs(`Hi ${user.full_name},`, "An administrator reset the authenticator app on your ClanChief account and signed you out everywhere.",
         "Next time you sign in you'll be asked to set up an authenticator again. If you didn't ask for this, contact your HR team.")).catch(() => undefined);
     return { reset: true, devicesRemoved: devices, sessionsRevoked: sessions };
   }
@@ -190,7 +190,7 @@ export class AccountAccessService {
     const next: AuthPolicy = { ...DEFAULT_POLICY, ...before, ...Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined)) } as AuthPolicy;
     if (next.signInMethods === "SSO") {
       const hasSso = !!(process.env.OIDC_ISSUER && process.env.OIDC_CLIENT_ID);
-      if (!hasSso) throw new BadRequestException("Single sign-on isn't configured for Northstar yet, so password sign-in can't be turned off.");
+      if (!hasSso) throw new BadRequestException("Single sign-on isn't configured for ClanChief yet, so password sign-in can't be turned off.");
     }
     if (next.sessionIdleMinutes > next.sessionMaxHours * 60) next.sessionIdleMinutes = next.sessionMaxHours * 60;
     await this.database.systemQuery(
@@ -227,13 +227,13 @@ export class AccountAccessService {
       return { existing: false as const, userId: user.id, raw, inviteId: invite.id, expiresAt: invite.expires_at };
     });
     await recordAuthEvent(this.database, { event: result.existing ? "platform_admin_granted" : "platform_admin_invited", success: true, userId: result.userId, detail: { by: identity.userId } });
-    if (!result.existing) await this.sendInvite({ raw: result.raw, email, fullName: input.fullName, organizationId: null, slug: null, brandName: "the Northstar platform team" });
+    if (!result.existing) await this.sendInvite({ raw: result.raw, email, fullName: input.fullName, organizationId: null, slug: null, brandName: "the ClanChief platform team" });
     return result.existing ? { granted: true, email } : { invited: true, email, expiresAt: result.expiresAt };
   }
 
   /**
    * Platform admin sends the account set-up email to a brand admin — the first HR admin of a new brand can't be
-   * invited by anyone inside that brand yet. People who already have a Northstar password just sign in.
+   * invited by anyone inside that brand yet. People who already have a ClanChief password just sign in.
    */
   async platformInviteMember(identity: AuthIdentity, organizationId: string, userId: string) {
     if (!(await this.isPlatformAdmin(identity.userId))) throw new ForbiddenException("Only platform administrators can do this.");

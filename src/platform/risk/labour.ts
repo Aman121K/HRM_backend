@@ -15,8 +15,8 @@ export type LabourInput = {
 };
 
 export const LABOUR_SKIPPED: SkippedCheck[] = [
-  { key: "labour.minors", area: "labour", label: "Employment of minors / adolescents", reason: "Not checked: Northstar does not store employees' dates of birth. Add date of birth to employee records to enable this check." },
-  { key: "labour.women_night_shift", area: "labour", label: "Women on night shifts (consent & safeguards)", reason: "Not checked: Northstar does not store gender, and we will not infer it from names. Track night-shift consent and transport safeguards outside this tool." },
+  { key: "labour.minors", area: "labour", label: "Employment of minors / adolescents", reason: "Not checked: ClanChief does not store employees' dates of birth. Add date of birth to employee records to enable this check." },
+  { key: "labour.women_night_shift", area: "labour", label: "Women on night shifts (consent & safeguards)", reason: "Not checked: ClanChief does not store gender, and we will not infer it from names. Track night-shift consent and transport safeguards outside this tool." },
 ];
 
 const minutesOf = (time: string) => { const [h, m] = time.split(":").map(Number); return h * 60 + m; };
@@ -180,7 +180,7 @@ function overtime(input: LabourInput, settings: RiskSettings): SignalDraft[] {
       evidence: {
         columns: [{ key: "date", label: "Date", kind: "date" }, { key: "in", label: "First in", kind: "datetime" }, { key: "out", label: "Last out", kind: "datetime" }, { key: "worked", label: "Worked", kind: "hours" }, { key: "planned", label: "Rostered", kind: "hours" }],
         rows: list.map((row) => ({ date: row.day.date, in: row.day.firstIn, out: row.day.lastOut, worked: hours(row.day.minutes), planned: row.plannedMinutes === null ? null : hours(row.plannedMinutes) })),
-        note: "Northstar has no separate overtime approval yet; an approved attendance regularization for the day counts as approval.",
+        note: "ClanChief has no separate overtime approval yet; an approved attendance regularization for the day counts as approval.",
       },
       action: { label: "Review attendance", href: `/attendance?employee=${employeeId}` }, audiences: ["MANAGER"],
       basis: { employeeId, dates: list.map((row) => row.day.date).sort(), hours: Math.round(total / 60) },

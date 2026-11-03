@@ -1,4 +1,4 @@
-// Northstar background worker: `npm run jobs:dev` (build + watch) or `npm run jobs:start`.
+// ClanChief background worker: `npm run jobs:dev` (build + watch) or `npm run jobs:start`.
 // Boots the Nest application context (no HTTP server), so every feature module's onModuleInit has registered its
 // handlers in JobRegistry, then consumes BullMQ queue "northstar-platform" and keeps the recurring schedules in sync.
 import "dotenv/config";

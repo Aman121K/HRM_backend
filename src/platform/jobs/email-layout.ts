@@ -35,10 +35,10 @@ export function emailList(items: { title: string; meta?: string }[]) {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0;border-bottom:1px solid #e6e0d4">${rows}</table>`;
 }
 
-/** Wraps message HTML in the Northstar layout. Messages that are already full documents are sent unchanged. */
+/** Wraps message HTML in the ClanChief layout. Messages that are already full documents are sent unchanged. */
 export function renderEmail(input: { subject: string; html: string; organizationName?: string }) {
   if (/<html[\s>]/i.test(input.html)) return input.html;
-  const org = escapeHtml(input.organizationName || "Northstar People");
+  const org = escapeHtml(input.organizationName || "ClanChief");
   const settings = appLink("/my-space");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(input.subject)}</title></head>` +
     `<body style="margin:0;padding:0;background:#f5f1e8">` +
@@ -50,8 +50,8 @@ export function renderEmail(input: { subject: string; html: string; organization
     `<tr><td style="padding:28px 28px 8px;font:400 15px/1.6 Manrope,Segoe UI,Arial,sans-serif;color:#1d2522">` +
     `<h1 style="margin:0 0 16px;font:800 21px/1.3 Manrope,Segoe UI,Arial,sans-serif;color:#1d2522">${escapeHtml(input.subject)}</h1>${input.html}</td></tr>` +
     `<tr><td style="padding:20px 28px 28px;font:400 12px/1.6 Manrope,Segoe UI,Arial,sans-serif;color:#6b716c;border-top:1px solid #e6e0d4">` +
-    `Sent by Northstar People on behalf of ${org}. This is an automated message — please don't reply.<br>` +
-    `<a href="${escapeHtml(settings)}" style="color:#0b615c">Open Northstar</a></td></tr>` +
+    `Sent by ClanChief on behalf of ${org}. This is an automated message — please don't reply.<br>` +
+    `<a href="${escapeHtml(settings)}" style="color:#0b615c">Open ClanChief</a></td></tr>` +
     `</table></td></tr></table></body></html>`;
 }
 

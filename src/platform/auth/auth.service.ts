@@ -174,7 +174,7 @@ export class AuthService {
       user = (await this.pool.query(
         `UPDATE users SET oidc_issuer=$1, oidc_subject=$2 WHERE lower(email)=$3 AND oidc_subject IS NULL RETURNING id`,
         [issuer, subject, email])).rows[0];
-      if (!user) throw new ForbiddenException("No Northstar account exists for this email. Ask HR to invite you.");
+      if (!user) throw new ForbiddenException("No ClanChief account exists for this email. Ask HR to invite you.");
     }
     await this.pool.query(`UPDATE users SET last_sign_in_at=now() WHERE id=$1 AND (last_sign_in_at IS NULL OR last_sign_in_at < now() - interval '5 minutes')`, [user.id]);
     const requested = String(payload.organization_id || headers["x-organization-id"] || "");

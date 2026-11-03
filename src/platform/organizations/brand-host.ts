@@ -4,7 +4,7 @@
  */
 export const RESERVED_SUBDOMAINS = new Set([
   "www", "app", "api", "admin", "auth", "login", "sso", "idp", "mail", "smtp", "static", "cdn", "assets", "files", "status",
-  "platform", "help", "support", "docs", "dev", "staging", "test", "demo", "northstar", "b", "m", "mobile", "ws",
+  "platform", "help", "support", "docs", "dev", "staging", "test", "demo", "northstar", "clanchief", "b", "m", "mobile", "ws",
 ]);
 
 /** The brand slug a browser Origin/Host points at, or null for the main domain and anything unrelated. */

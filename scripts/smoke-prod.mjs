@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Post-deploy smoke test for a production (or staging) Northstar deployment. Read-only: only GET/OPTIONS requests.
+// Post-deploy smoke test for a production (or staging) ClanChief deployment. Read-only: only GET/OPTIONS requests.
 //
 //   node scripts/smoke-prod.mjs --api https://api.people.example.in --web https://people.example.in \
 //        [--brand https://blue-tokai.people.example.in] [--token <bearer token of a test account>]

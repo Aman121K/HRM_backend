@@ -297,7 +297,7 @@ export class PeopleAdminService {
         const account = accounts.get(email);
         if (account?.linked_number) errors.push(`This email already signs in as ${account.linked_number}`);
         else if (account?.member_role && PRIVILEGED.includes(account.member_role) && !this.isOwner(identity)) errors.push(`Only an owner can change a ${account.member_role} member`);
-        else if (account) warnings.push("An existing Northstar account with this email will be linked");
+        else if (account) warnings.push("An existing ClanChief account with this email will be linked");
       }
       if (errors.length) item.outcome = "INVALID";
     }

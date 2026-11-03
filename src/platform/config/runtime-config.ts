@@ -38,14 +38,14 @@ export class RuntimeConfig {
         errors.push("DATABASE_URL_RUNTIME must point to a separate least-privilege role in production");
       if (this.allowDemoIdentity)
         errors.push("ALLOW_DEMO_IDENTITY must be false in production");
-      // Sign-in: company SSO (OIDC) and/or Northstar's own password sign-in (native auth). At least one must be fully
+      // Sign-in: company SSO (OIDC) and/or ClanChief's own password sign-in (native auth). At least one must be fully
       // configured; a partially configured OIDC block is always an error (jose would skip unpinned checks).
       const oidcAny = !!(this.oidcIssuer || this.oidcAudience || this.oidcJwksUrl);
       const oidcAll = !!(this.oidcIssuer && this.oidcAudience && this.oidcJwksUrl);
       const nativeAuth = !!(process.env.AUTH_SIGNING_KEY && process.env.AUTH_ISSUER);
       if (oidcAny && !oidcAll) errors.push("OIDC_ISSUER, OIDC_AUDIENCE and OIDC_JWKS_URL must all be set when OIDC is used");
       if (!oidcAll && !nativeAuth)
-        errors.push("Configure sign-in: AUTH_SIGNING_KEY and AUTH_ISSUER (Northstar password sign-in) and/or OIDC_ISSUER, OIDC_AUDIENCE and OIDC_JWKS_URL (company SSO)");
+        errors.push("Configure sign-in: AUTH_SIGNING_KEY and AUTH_ISSUER (ClanChief password sign-in) and/or OIDC_ISSUER, OIDC_AUDIENCE and OIDC_JWKS_URL (company SSO)");
       if (!this.redisUrl) errors.push("REDIS_URL is required in production");
     }
     if (errors.length) throw new Error(`Invalid backend configuration: ${errors.join("; ")}`);

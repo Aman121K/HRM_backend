@@ -60,7 +60,7 @@ export function matchTotp(secretBase32: string, code: string, now = Date.now(), 
   return matched;
 }
 
-export function otpauthUrl(secretBase32: string, account: string, issuer = "Northstar People") {
+export function otpauthUrl(secretBase32: string, account: string, issuer = "ClanChief") {
   const label = `${encodeURIComponent(issuer)}:${encodeURIComponent(account)}`;
   const params = new URLSearchParams({ secret: secretBase32, issuer, algorithm: "SHA1", digits: String(TOTP_DIGITS), period: String(TOTP_PERIOD) });
   return `otpauth://totp/${label}?${params.toString()}`;

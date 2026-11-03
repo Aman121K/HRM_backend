@@ -76,7 +76,7 @@ export class OutboxDispatcher {
 
   private async deliver(row: OutboxRow, organizationName: string): Promise<"SENT" | "FAILED" | "GAVE_UP"> {
     const identity = await this.runner.systemIdentity(row.organization_id);
-    const from = process.env.MAIL_FROM || "Northstar People <no-reply@northstar.local>";
+    const from = process.env.MAIL_FROM || "ClanChief <no-reply@northstar.local>";
     // Every producer should already pass a clean subject; this is the last line of defence against header injection.
     const subject = headerSafe(row.subject) || "Notification";
     const html = renderEmail({ subject, html: row.html, organizationName });

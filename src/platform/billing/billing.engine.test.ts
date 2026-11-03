@@ -142,7 +142,7 @@ test("PDF: starts with %PDF and the text is extractable", async () => {
   const buffer = renderBillingPdf({
     kind: "INVOICE", number: "NS/2026-27/0001", issueDate: "2026-10-01", dueDate: "2026-10-16", periodStart: "2026-09-01", periodEnd: "2026-09-30",
     placeOfSupply: "MH", supplyType: "INTER", sacCode: "998315", gstRate: 18,
-    seller: { legalName: "Northstar Software Pvt Ltd", gstin: "29ABCDE1234F1Z5", address: "1 MG Road, Bengaluru 560001", stateCode: "KA" },
+    seller: { legalName: "ClanChief Software Pvt Ltd", gstin: "29ABCDE1234F1Z5", address: "1 MG Road, Bengaluru 560001", stateCode: "KA" },
     buyer: { legalName: "Got Tea (Ruchi & Sons)", gstin: "27AAPFU0939F1ZV", address: "Lower Parel, Mumbai", stateCode: "MH" },
     lines: [{ description: "Growth — Got Tea: 4 employees × Rs. 99.00 PEPM", quantity: 4, unitPricePaise: 9900, amountPaise: 39600 }],
     subtotalPaise: 39600, cgstPaise: 0, sgstPaise: 0, igstPaise: 7128, totalPaise: 46728,

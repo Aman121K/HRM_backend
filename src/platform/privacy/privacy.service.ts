@@ -294,7 +294,7 @@ export class PrivacyService implements OnModuleInit {
       format: "northstar.privacy-export/v1",
       generatedAt: new Date().toISOString(),
       dataFiduciary: org?.legalName || org?.name,
-      dataProcessor: "Northstar HRM platform operator (processes this data on your employer's behalf)",
+      dataProcessor: "ClanChief platform operator (processes this data on your employer's behalf)",
       about: `${profile.fullName} (${profile.employeeNumber})`,
       notes: [
         "This is a copy of the personal data your employer holds about you in this workspace, provided under section 11 of the Digital Personal Data Protection Act, 2023.",

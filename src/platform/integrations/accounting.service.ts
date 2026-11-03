@@ -145,7 +145,7 @@ export class AccountingService {
     const label = new Date(Date.UTC(+y, +m - 1, 1)).toLocaleString("en-IN", { month: "long", year: "numeric", timeZone: "UTC" });
     const voucher: Voucher = {
       number: `PAY/${run.period}`, type: settings.journalVoucherType, date: run.pay_date || lastDayOfPeriod(run.period), reference: `NS-RUN-${run.id.slice(0, 8)}`,
-      narration: `Salary for ${label} — ${lines.length} employees (Northstar payroll run ${run.id.slice(0, 8)})`, lines: voucherLines,
+      narration: `Salary for ${label} — ${lines.length} employees (ClanChief payroll run ${run.id.slice(0, 8)})`, lines: voucherLines,
     };
     const notes = t.held ? [`${t.held} held salary line(s) are excluded, matching the run totals; book them when released.`] : [];
     return { period: run.period as string, runId: run.id as string, vouchers: [voucher], checks, notes };

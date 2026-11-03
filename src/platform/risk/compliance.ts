@@ -162,8 +162,8 @@ export function evaluateObligation(item: Obligation, facts: ComplianceFacts, tod
   const noRun = (text: string) => lastMonth >= periodOf(today)
     ? result("AWAITING_PAYROLL", `The ${monthLabel(lastMonth)} payroll hasn't been run yet — amounts appear here once it is calculated.`)
     : result("NO_PAYROLL", facts.firstRunPeriod
-    ? `${text} If this was processed outside Northstar, mark it as filed once paid.`
-    : `Payroll isn't run in Northstar for this brand, so this can't be checked against data — mark it as filed once done.`);
+    ? `${text} If this was processed outside ClanChief, mark it as filed once paid.`
+    : `Payroll isn't run in ClanChief for this brand, so this can't be checked against data — mark it as filed once done.`);
   const sum = (pick: (run: RunFact) => number) => present.reduce((total, run) => total + pick(run), 0);
   const exported = (run: RunFact | null, kind: string) => run?.exports.find((row) => row.kind === kind) || null;
   const draft = main && !FINAL_RUN(main.status) ? ` The ${monthLabel(main.period)} run is still ${main.status.toLowerCase()} — approve it first.` : "";
@@ -197,7 +197,7 @@ export function evaluateObligation(item: Obligation, facts: ComplianceFacts, tod
       const tds = sum((run) => Number(run.totals.tds) || 0);
       if (tds <= 0) return result("NOT_APPLICABLE", `No salary TDS in ${item.periodLabel}${item.kind === "TDS_RETURN" ? " — a nil return may still be required; verify." : "."}`, 0, main?.id || null);
       const missing = item.months.length - present.length;
-      return result("PENDING", `${inr(tds)} salary TDS across ${plural(present.length, "run")}${missing > 0 ? ` (${missing} month(s) without a run in Northstar)` : ""}.`, tds, main?.id || null);
+      return result("PENDING", `${inr(tds)} salary TDS across ${plural(present.length, "run")}${missing > 0 ? ` (${missing} month(s) without a run in ClanChief)` : ""}.`, tds, main?.id || null);
     }
     case "LWF":
       return result("VERIFY", `${item.note}`, null, main?.id || null);
@@ -215,7 +215,7 @@ export function complianceCalendar(from: string, to: string, states: string[], f
 const MONEY_KINDS = new Set<ObligationKind>(["PF", "ESI", "TDS"]);
 /**
  * Signals for obligations that are overdue or due within a week and not marked filed. Items before the brand's first
- * payroll run in Northstar are listed in the calendar but not raised as signals. Returns keys that are satisfied
+ * payroll run in ClanChief are listed in the calendar but not raised as signals. Returns keys that are satisfied
  * (filed / nothing due) so earlier signals for them resolve automatically.
  */
 export function complianceSignals(items: CalendarItem[], facts: ComplianceFacts): { drafts: SignalDraft[]; cleared: string[] } {
@@ -224,7 +224,7 @@ export function complianceSignals(items: CalendarItem[], facts: ComplianceFacts)
   for (const item of items) {
     if (item.status === "FILED" || item.status === "NOT_APPLICABLE") { cleared.push(item.key); continue; }
     if (item.daysLeft > 7 || item.status === "AWAITING_PAYROLL") continue;
-    if (!facts.firstRunPeriod) continue; // no payroll in Northstar: one summary signal instead (below)
+    if (!facts.firstRunPeriod) continue; // no payroll in ClanChief: one summary signal instead (below)
     if (item.months.every((month) => month < facts.firstRunPeriod!)) continue;
     const overdue = item.daysLeft < 0;
     let severity: Severity;
@@ -253,14 +253,14 @@ export function complianceSignals(items: CalendarItem[], facts: ComplianceFacts)
   return { drafts, cleared };
 }
 
-/** One low signal when a brand has no payroll runs in Northstar at all, so filings can't be tied to data. */
+/** One low signal when a brand has no payroll runs in ClanChief at all, so filings can't be tied to data. */
 export function noPayrollSignal(facts: ComplianceFacts, items: CalendarItem[]): SignalDraft | null {
   if (facts.firstRunPeriod) return null;
   const open = items.filter((item) => item.status !== "FILED" && item.daysLeft <= 7);
   if (!open.length) return null;
   return {
     detector: "compliance.calendar", area: "compliance", subjectKey: "no-payroll-data", severity: "low",
-    title: `${plural(open.length, "statutory filing")} can't be checked — no payroll in Northstar`,
+    title: `${plural(open.length, "statutory filing")} can't be checked — no payroll in ClanChief`,
     explanation: `There are no payroll runs for this brand, so ${plural(open.length, "due date")} in the next week or already past (PF, ESI, TDS, PT) can't be tied to payroll data. Mark each one as filed from the compliance calendar once your payroll provider confirms it.`,
     employeeIds: [], evidence: { columns: [{ key: "item", label: "Obligation" }, { key: "due", label: "Due", kind: "date" }], rows: open.slice(0, 20).map((item) => ({ item: item.label, due: item.dueDate })) },
     action: { label: "Open compliance calendar", href: "/risk?tab=compliance" }, audiences: ["PAYROLL"],

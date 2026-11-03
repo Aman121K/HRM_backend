@@ -66,7 +66,7 @@ test("status is tied to data: ECR exported → READY, marked → FILED, no run �
   assert.equal(evaluateObligation(items.get("PF:2026-08")!, marked, "2026-09-20").status, "FILED");
   const gap = evaluateObligation(items.get("PF:2026-08")!, facts([run("2026-07")]), "2026-09-10");
   assert.equal(gap.status, "NO_PAYROLL");
-  assert.match(gap.detail, /processed outside Northstar/);
+  assert.match(gap.detail, /processed outside ClanChief/);
   assert.equal(evaluateObligation(items.get("PF:2026-08")!, facts([run("2026-08", { status: "CANCELLED" })]), "2026-09-10").status, "NO_PAYROLL");
   const future = evaluateObligation(byKey("2026-11-01", "2026-11-30").get("TDS:2026-10")!, facts([run("2026-09")]), "2026-10-20");
   assert.equal(future.status, "AWAITING_PAYROLL", "the October payroll can't exist before October ends");
@@ -87,7 +87,7 @@ test("signals: overdue money filings >7 days are critical, due tomorrow is high,
   assert.equal(pf.action.href, "/payroll/admin/run-2026-08");
 });
 
-test("no payroll in Northstar: no per-item signals, one low summary signal", () => {
+test("no payroll in ClanChief: no per-item signals, one low summary signal", () => {
   const data = facts([]);
   const calendar = complianceCalendar("2026-08-01", "2026-10-31", ["MH"], data, "2026-09-25");
   assert.equal(complianceSignals(calendar.items, data).drafts.length, 0);

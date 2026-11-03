@@ -823,6 +823,65 @@ CREATE TABLE public.employee_import_jobs (
     valid_rows integer NOT NULL
 );
 ALTER TABLE public.employee_import_jobs OWNER TO hrm_app;
+CREATE TABLE public.employee_loan_installments (
+    CONSTRAINT employee_loan_installments_amount_check CHECK ((amount >= (0)::numeric))
+    CONSTRAINT employee_loan_installments_note_check CHECK (((note IS NULL) OR (length(note) <= 300)))
+    CONSTRAINT employee_loan_installments_period_check CHECK ((period ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'::text))
+    CONSTRAINT employee_loan_installments_seq_check CHECK ((seq >= 1))
+    CONSTRAINT employee_loan_installments_status_check CHECK ((status = ANY (ARRAY['DUE'::text, 'DEDUCTED'::text, 'SKIPPED'::text, 'PREPAID'::text])))
+    amount numeric(14,2) NOT NULL
+    employee_id uuid NOT NULL
+    id uuid DEFAULT gen_random_uuid() NOT NULL
+    loan_id uuid NOT NULL
+    note text
+    organization_id uuid NOT NULL
+    period text NOT NULL
+    run_id uuid
+    seq integer NOT NULL
+    status text DEFAULT 'DUE'::text NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+ALTER TABLE public.employee_loan_installments OWNER TO hrm_app;
+CREATE TABLE public.employee_loans (
+    CONSTRAINT employee_loans_check CHECK (((status <> ALL (ARRAY['ACTIVE'::text, 'CLOSED'::text])) OR (disbursed_on IS NOT NULL) OR (closure_note IS NOT NULL)))
+    CONSTRAINT employee_loans_closure_note_check CHECK (((closure_note IS NULL) OR (length(closure_note) <= 500)))
+    CONSTRAINT employee_loans_decision_note_check CHECK (((decision_note IS NULL) OR (length(decision_note) <= 1000)))
+    CONSTRAINT employee_loans_disbursement_ref_check CHECK (((disbursement_ref IS NULL) OR (length(disbursement_ref) <= 80)))
+    CONSTRAINT employee_loans_emi_check CHECK ((emi > (0)::numeric))
+    CONSTRAINT employee_loans_first_period_check CHECK ((first_period ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'::text))
+    CONSTRAINT employee_loans_kind_check CHECK ((kind = ANY (ARRAY['LOAN'::text, 'ADVANCE'::text])))
+    CONSTRAINT employee_loans_loan_number_check CHECK ((loan_number ~ '^(LN|ADV)-[0-9]{4,}$'::text))
+    CONSTRAINT employee_loans_principal_check CHECK (((principal >= (500)::numeric) AND (principal <= (10000000)::numeric)))
+    CONSTRAINT employee_loans_purpose_check CHECK ((purpose = ANY (ARRAY['Medical'::text, 'Education'::text, 'Housing'::text, 'Vehicle'::text, 'Wedding'::text, 'Family emergency'::text, 'Relocation'::text, 'Other'::text])))
+    CONSTRAINT employee_loans_reason_check CHECK (((length(reason) >= 3) AND (length(reason) <= 1000)))
+    CONSTRAINT employee_loans_status_check CHECK ((status = ANY (ARRAY['REQUESTED'::text, 'APPROVED'::text, 'ACTIVE'::text, 'CLOSED'::text, 'REJECTED'::text, 'CANCELLED'::text])))
+    CONSTRAINT employee_loans_tenure_months_check CHECK (((tenure_months >= 1) AND (tenure_months <= 60)))
+    closed_at timestamp with time zone
+    closure_note text
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+    decided_at timestamp with time zone
+    decided_by uuid
+    decision_note text
+    disbursed_by uuid
+    disbursed_on date
+    disbursement_ref text
+    emi numeric(14,2) NOT NULL
+    employee_id uuid NOT NULL
+    first_period text NOT NULL
+    id uuid DEFAULT gen_random_uuid() NOT NULL
+    kind text NOT NULL
+    loan_number text NOT NULL
+    organization_id uuid NOT NULL
+    principal numeric(14,2) NOT NULL
+    purpose text NOT NULL
+    reason text NOT NULL
+    requested_by uuid NOT NULL
+    status text DEFAULT 'REQUESTED'::text NOT NULL
+    tenure_months integer NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    version integer DEFAULT 1 NOT NULL
+);
+ALTER TABLE public.employee_loans OWNER TO hrm_app;
 CREATE TABLE public.employee_master_details (
     CONSTRAINT employee_master_details_employment_type_check CHECK (((employment_type IS NULL) OR (employment_type = ANY (ARRAY['FULL_TIME'::text, 'PART_TIME'::text, 'CONTRACT'::text, 'INTERN'::text, 'CONSULTANT'::text]))))
     CONSTRAINT employee_master_details_gender_check CHECK (((gender IS NULL) OR (gender = ANY (ARRAY['MALE'::text, 'FEMALE'::text, 'OTHER'::text, 'UNDISCLOSED'::text]))))
@@ -1615,7 +1674,7 @@ CREATE TABLE public.payroll_inputs (
     CONSTRAINT payroll_inputs_kind_check CHECK ((kind = ANY (ARRAY['EARNING'::text, 'DEDUCTION'::text, 'REIMBURSEMENT'::text, 'LOP'::text])))
     CONSTRAINT payroll_inputs_label_check CHECK (((length(label) >= 2) AND (length(label) <= 120)))
     CONSTRAINT payroll_inputs_note_check CHECK (((note IS NULL) OR (length(note) <= 500)))
-    CONSTRAINT payroll_inputs_source_check CHECK ((source = ANY (ARRAY['MANUAL'::text, 'EXPENSE_CLAIM'::text])))
+    CONSTRAINT payroll_inputs_source_check CHECK ((source = ANY (ARRAY['MANUAL'::text, 'EXPENSE_CLAIM'::text, 'LOAN'::text])))
     amount numeric(14,2) DEFAULT 0 NOT NULL
     code text NOT NULL
     created_at timestamp with time zone DEFAULT now() NOT NULL
@@ -1837,6 +1896,122 @@ CREATE TABLE public.payslips (
     storage_reference text
 );
 ALTER TABLE public.payslips OWNER TO hrm_app;
+CREATE TABLE public.perf_cycles (
+    CONSTRAINT perf_cycles_check CHECK ((period_end > period_start))
+    CONSTRAINT perf_cycles_department_check CHECK (((department IS NULL) OR (length(department) <= 80)))
+    CONSTRAINT perf_cycles_goal_weight_check CHECK (((goal_weight >= 0) AND (goal_weight <= 100)))
+    CONSTRAINT perf_cycles_max_peers_check CHECK (((max_peers >= 0) AND (max_peers <= 8)))
+    CONSTRAINT perf_cycles_name_check CHECK (((length(name) >= 3) AND (length(name) <= 80)))
+    CONSTRAINT perf_cycles_status_check CHECK ((status = ANY (ARRAY['DRAFT'::text, 'GOAL_SETTING'::text, 'REVIEW'::text, 'CALIBRATION'::text, 'PUBLISHED'::text, 'CLOSED'::text])))
+    competencies jsonb DEFAULT '[]'::jsonb NOT NULL
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+    created_by uuid NOT NULL
+    department text
+    goal_weight integer DEFAULT 70 NOT NULL
+    goals_due date
+    id uuid DEFAULT gen_random_uuid() NOT NULL
+    max_peers integer DEFAULT 3 NOT NULL
+    name text NOT NULL
+    organization_id uuid NOT NULL
+    peer_review boolean DEFAULT true NOT NULL
+    period_end date NOT NULL
+    period_start date NOT NULL
+    reviews_due date
+    self_review boolean DEFAULT true NOT NULL
+    status text DEFAULT 'DRAFT'::text NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    version integer DEFAULT 1 NOT NULL
+);
+ALTER TABLE public.perf_cycles OWNER TO hrm_app;
+CREATE TABLE public.perf_goals (
+    CONSTRAINT perf_goals_description_check CHECK (((description IS NULL) OR (length(description) <= 2000)))
+    CONSTRAINT perf_goals_manager_comment_check CHECK (((manager_comment IS NULL) OR (length(manager_comment) <= 2000)))
+    CONSTRAINT perf_goals_manager_rating_check CHECK (((manager_rating IS NULL) OR ((manager_rating >= 1) AND (manager_rating <= 5))))
+    CONSTRAINT perf_goals_progress_check CHECK (((progress >= 0) AND (progress <= 100)))
+    CONSTRAINT perf_goals_self_comment_check CHECK (((self_comment IS NULL) OR (length(self_comment) <= 2000)))
+    CONSTRAINT perf_goals_self_rating_check CHECK (((self_rating IS NULL) OR ((self_rating >= 1) AND (self_rating <= 5))))
+    CONSTRAINT perf_goals_title_check CHECK (((length(title) >= 3) AND (length(title) <= 160)))
+    CONSTRAINT perf_goals_weight_check CHECK (((weight >= 5) AND (weight <= 100)))
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+    cycle_id uuid NOT NULL
+    description text
+    employee_id uuid NOT NULL
+    id uuid DEFAULT gen_random_uuid() NOT NULL
+    key_results jsonb DEFAULT '[]'::jsonb NOT NULL
+    manager_comment text
+    manager_rating integer
+    organization_id uuid NOT NULL
+    progress integer DEFAULT 0 NOT NULL
+    self_comment text
+    self_rating integer
+    sort_order integer DEFAULT 0 NOT NULL
+    title text NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    weight integer NOT NULL
+);
+ALTER TABLE public.perf_goals OWNER TO hrm_app;
+CREATE TABLE public.perf_participants (
+    CONSTRAINT perf_participants_calibration_note_check CHECK (((calibration_note IS NULL) OR (length(calibration_note) <= 1000)))
+    CONSTRAINT perf_participants_final_rating_check CHECK (((final_rating IS NULL) OR ((final_rating >= (1)::numeric) AND (final_rating <= (5)::numeric))))
+    CONSTRAINT perf_participants_goals_note_check CHECK (((goals_note IS NULL) OR (length(goals_note) <= 1000)))
+    CONSTRAINT perf_participants_goals_status_check CHECK ((goals_status = ANY (ARRAY['DRAFT'::text, 'SUBMITTED'::text, 'APPROVED'::text])))
+    CONSTRAINT perf_participants_increment_pct_check CHECK (((increment_pct IS NULL) OR ((increment_pct >= (0)::numeric) AND (increment_pct <= (100)::numeric))))
+    CONSTRAINT perf_participants_manager_status_check CHECK ((manager_status = ANY (ARRAY['PENDING'::text, 'SUBMITTED'::text])))
+    CONSTRAINT perf_participants_new_designation_check CHECK (((new_designation IS NULL) OR (length(new_designation) <= 80)))
+    CONSTRAINT perf_participants_revision_status_check CHECK ((revision_status = ANY (ARRAY['NONE'::text, 'PROPOSED'::text, 'APPROVED'::text, 'APPLIED'::text])))
+    CONSTRAINT perf_participants_self_status_check CHECK ((self_status = ANY (ARRAY['PENDING'::text, 'SUBMITTED'::text])))
+    approved_by uuid
+    calibration_note text
+    computed_score numeric(4,2)
+    cycle_id uuid NOT NULL
+    employee_id uuid NOT NULL
+    final_rating numeric(3,1)
+    goals_note text
+    goals_status text DEFAULT 'DRAFT'::text NOT NULL
+    id uuid DEFAULT gen_random_uuid() NOT NULL
+    increment_pct numeric(5,2)
+    manager_id uuid
+    manager_status text DEFAULT 'PENDING'::text NOT NULL
+    new_designation text
+    organization_id uuid NOT NULL
+    promote boolean DEFAULT false NOT NULL
+    proposed_by uuid
+    published_at timestamp with time zone
+    revision_ctc numeric(14,2)
+    revision_effective date
+    revision_status text DEFAULT 'NONE'::text NOT NULL
+    revision_structure_id uuid
+    self_status text DEFAULT 'PENDING'::text NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    version integer DEFAULT 1 NOT NULL
+);
+ALTER TABLE public.perf_participants OWNER TO hrm_app;
+CREATE TABLE public.perf_reviews (
+    CONSTRAINT perf_reviews_check CHECK (((relation = 'SELF'::text) = (subject_id = reviewer_id)))
+    CONSTRAINT perf_reviews_comments_check CHECK (((comments IS NULL) OR (length(comments) <= 3000)))
+    CONSTRAINT perf_reviews_improvements_check CHECK (((improvements IS NULL) OR (length(improvements) <= 3000)))
+    CONSTRAINT perf_reviews_overall_rating_check CHECK (((overall_rating IS NULL) OR ((overall_rating >= 1) AND (overall_rating <= 5))))
+    CONSTRAINT perf_reviews_relation_check CHECK ((relation = ANY (ARRAY['SELF'::text, 'MANAGER'::text, 'PEER'::text, 'REPORT'::text])))
+    CONSTRAINT perf_reviews_status_check CHECK ((status = ANY (ARRAY['REQUESTED'::text, 'SUBMITTED'::text, 'DECLINED'::text])))
+    CONSTRAINT perf_reviews_strengths_check CHECK (((strengths IS NULL) OR (length(strengths) <= 3000)))
+    comments text
+    competency_ratings jsonb DEFAULT '{}'::jsonb NOT NULL
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+    cycle_id uuid NOT NULL
+    id uuid DEFAULT gen_random_uuid() NOT NULL
+    improvements text
+    nominated_by uuid
+    organization_id uuid NOT NULL
+    overall_rating integer
+    relation text NOT NULL
+    reviewer_id uuid NOT NULL
+    status text DEFAULT 'REQUESTED'::text NOT NULL
+    strengths text
+    subject_id uuid NOT NULL
+    submitted_at timestamp with time zone
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+ALTER TABLE public.perf_reviews OWNER TO hrm_app;
 CREATE TABLE public.platform_admins (
     created_at timestamp with time zone DEFAULT now() NOT NULL
     user_id uuid NOT NULL
@@ -2834,6 +3009,14 @@ ALTER TABLE ONLY public.email_outbox
     ADD CONSTRAINT email_outbox_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.employee_import_jobs
     ADD CONSTRAINT employee_import_jobs_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.employee_loan_installments
+    ADD CONSTRAINT employee_loan_installments_loan_id_seq_key UNIQUE (loan_id, seq);
+ALTER TABLE ONLY public.employee_loan_installments
+    ADD CONSTRAINT employee_loan_installments_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.employee_loans
+    ADD CONSTRAINT employee_loans_organization_id_loan_number_key UNIQUE (organization_id, loan_number);
+ALTER TABLE ONLY public.employee_loans
+    ADD CONSTRAINT employee_loans_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.employee_master_details
     ADD CONSTRAINT employee_master_details_pkey PRIMARY KEY (organization_id, employee_id);
 ALTER TABLE ONLY public.employees
@@ -2974,6 +3157,18 @@ ALTER TABLE ONLY public.payslips
     ADD CONSTRAINT payslips_organization_id_employee_id_period_key UNIQUE (organization_id, employee_id, period);
 ALTER TABLE ONLY public.payslips
     ADD CONSTRAINT payslips_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.perf_cycles
+    ADD CONSTRAINT perf_cycles_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.perf_goals
+    ADD CONSTRAINT perf_goals_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.perf_participants
+    ADD CONSTRAINT perf_participants_cycle_id_employee_id_key UNIQUE (cycle_id, employee_id);
+ALTER TABLE ONLY public.perf_participants
+    ADD CONSTRAINT perf_participants_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.perf_reviews
+    ADD CONSTRAINT perf_reviews_cycle_id_subject_id_reviewer_id_key UNIQUE (cycle_id, subject_id, reviewer_id);
+ALTER TABLE ONLY public.perf_reviews
+    ADD CONSTRAINT perf_reviews_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.platform_admins
     ADD CONSTRAINT platform_admins_pkey PRIMARY KEY (user_id);
 ALTER TABLE ONLY public.policy_acknowledgements
@@ -3140,6 +3335,10 @@ CREATE INDEX compliance_evidence_check ON public.compliance_evidence USING btree
 CREATE INDEX compliance_evidence_control ON public.compliance_evidence USING btree (framework, control_id, collected_at DESC) WHERE (control_id IS NOT NULL);
 CREATE INDEX email_outbox_delivery ON public.email_outbox USING btree (status, available_at, id) WHERE (status = ANY (ARRAY['PENDING'::text, 'FAILED'::text]));
 CREATE INDEX email_outbox_recent ON public.email_outbox USING btree (organization_id, created_at DESC);
+CREATE INDEX employee_loan_installments_by_period ON public.employee_loan_installments USING btree (organization_id, period, status);
+CREATE UNIQUE INDEX employee_loan_installments_one_due_per_month ON public.employee_loan_installments USING btree (loan_id, period) WHERE (status = ANY (ARRAY['DUE'::text, 'DEDUCTED'::text]));
+CREATE INDEX employee_loans_by_employee ON public.employee_loans USING btree (organization_id, employee_id, status);
+CREATE INDEX employee_loans_by_status ON public.employee_loans USING btree (organization_id, status, created_at DESC);
 CREATE INDEX employees_department_directory ON public.employees USING btree (organization_id, status, department, full_name, id);
 CREATE INDEX employees_manager_directory ON public.employees USING btree (organization_id, manager_id, status, full_name, id);
 CREATE INDEX employees_register_order ON public.employees USING btree (organization_id, status, full_name, id);
@@ -3209,6 +3408,11 @@ CREATE INDEX payroll_runs_list ON public.payroll_runs USING btree (organization_
 CREATE UNIQUE INDEX payroll_runs_live_period ON public.payroll_runs USING btree (organization_id, period) WHERE (status <> 'CANCELLED'::text);
 CREATE INDEX payslip_employee_published ON public.payslips USING btree (organization_id, employee_id, status, period DESC, id);
 CREATE INDEX payslip_period_admin ON public.payslips USING btree (organization_id, period, status, employee_id);
+CREATE INDEX perf_cycles_by_org ON public.perf_cycles USING btree (organization_id, created_at DESC);
+CREATE INDEX perf_goals_by_person ON public.perf_goals USING btree (organization_id, cycle_id, employee_id);
+CREATE INDEX perf_participants_by_employee ON public.perf_participants USING btree (organization_id, employee_id);
+CREATE INDEX perf_participants_by_manager ON public.perf_participants USING btree (organization_id, manager_id, cycle_id);
+CREATE INDEX perf_reviews_by_reviewer ON public.perf_reviews USING btree (organization_id, reviewer_id, status);
 CREATE UNIQUE INDEX privacy_brand_closures_live ON public.privacy_brand_closures USING btree (organization_id) WHERE (status = ANY (ARRAY['PENDING_CONFIRMATION'::text, 'SCHEDULED'::text, 'DELETING'::text]));
 CREATE INDEX privacy_brand_exports_org ON public.privacy_brand_exports USING btree (organization_id, created_at DESC);
 CREATE INDEX privacy_breaches_org ON public.privacy_breaches USING btree (organization_id, detected_at DESC);
@@ -3427,6 +3631,24 @@ ALTER TABLE ONLY public.employee_import_jobs
     ADD CONSTRAINT employee_import_jobs_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id);
 ALTER TABLE ONLY public.employee_import_jobs
     ADD CONSTRAINT employee_import_jobs_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+ALTER TABLE ONLY public.employee_loan_installments
+    ADD CONSTRAINT employee_loan_installments_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id);
+ALTER TABLE ONLY public.employee_loan_installments
+    ADD CONSTRAINT employee_loan_installments_loan_id_fkey FOREIGN KEY (loan_id) REFERENCES public.employee_loans(id);
+ALTER TABLE ONLY public.employee_loan_installments
+    ADD CONSTRAINT employee_loan_installments_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+ALTER TABLE ONLY public.employee_loan_installments
+    ADD CONSTRAINT employee_loan_installments_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.payroll_runs(id);
+ALTER TABLE ONLY public.employee_loans
+    ADD CONSTRAINT employee_loans_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES public.employees(id);
+ALTER TABLE ONLY public.employee_loans
+    ADD CONSTRAINT employee_loans_disbursed_by_fkey FOREIGN KEY (disbursed_by) REFERENCES public.employees(id);
+ALTER TABLE ONLY public.employee_loans
+    ADD CONSTRAINT employee_loans_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id);
+ALTER TABLE ONLY public.employee_loans
+    ADD CONSTRAINT employee_loans_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+ALTER TABLE ONLY public.employee_loans
+    ADD CONSTRAINT employee_loans_requested_by_fkey FOREIGN KEY (requested_by) REFERENCES public.employees(id);
 ALTER TABLE ONLY public.employee_master_details
     ADD CONSTRAINT employee_master_details_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id);
 ALTER TABLE ONLY public.employee_master_details
@@ -3729,6 +3951,40 @@ ALTER TABLE ONLY public.payslips
     ADD CONSTRAINT payslips_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 ALTER TABLE ONLY public.payslips
     ADD CONSTRAINT payslips_payroll_run_id_fkey FOREIGN KEY (payroll_run_id) REFERENCES public.payroll_runs(id);
+ALTER TABLE ONLY public.perf_cycles
+    ADD CONSTRAINT perf_cycles_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.employees(id);
+ALTER TABLE ONLY public.perf_cycles
+    ADD CONSTRAINT perf_cycles_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+ALTER TABLE ONLY public.perf_goals
+    ADD CONSTRAINT perf_goals_cycle_id_fkey FOREIGN KEY (cycle_id) REFERENCES public.perf_cycles(id);
+ALTER TABLE ONLY public.perf_goals
+    ADD CONSTRAINT perf_goals_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id);
+ALTER TABLE ONLY public.perf_goals
+    ADD CONSTRAINT perf_goals_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+ALTER TABLE ONLY public.perf_participants
+    ADD CONSTRAINT perf_participants_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES public.employees(id);
+ALTER TABLE ONLY public.perf_participants
+    ADD CONSTRAINT perf_participants_cycle_id_fkey FOREIGN KEY (cycle_id) REFERENCES public.perf_cycles(id);
+ALTER TABLE ONLY public.perf_participants
+    ADD CONSTRAINT perf_participants_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id);
+ALTER TABLE ONLY public.perf_participants
+    ADD CONSTRAINT perf_participants_manager_id_fkey FOREIGN KEY (manager_id) REFERENCES public.employees(id);
+ALTER TABLE ONLY public.perf_participants
+    ADD CONSTRAINT perf_participants_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+ALTER TABLE ONLY public.perf_participants
+    ADD CONSTRAINT perf_participants_proposed_by_fkey FOREIGN KEY (proposed_by) REFERENCES public.employees(id);
+ALTER TABLE ONLY public.perf_participants
+    ADD CONSTRAINT perf_participants_revision_structure_id_fkey FOREIGN KEY (revision_structure_id) REFERENCES public.salary_structures(id);
+ALTER TABLE ONLY public.perf_reviews
+    ADD CONSTRAINT perf_reviews_cycle_id_fkey FOREIGN KEY (cycle_id) REFERENCES public.perf_cycles(id);
+ALTER TABLE ONLY public.perf_reviews
+    ADD CONSTRAINT perf_reviews_nominated_by_fkey FOREIGN KEY (nominated_by) REFERENCES public.employees(id);
+ALTER TABLE ONLY public.perf_reviews
+    ADD CONSTRAINT perf_reviews_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+ALTER TABLE ONLY public.perf_reviews
+    ADD CONSTRAINT perf_reviews_reviewer_id_fkey FOREIGN KEY (reviewer_id) REFERENCES public.employees(id);
+ALTER TABLE ONLY public.perf_reviews
+    ADD CONSTRAINT perf_reviews_subject_id_fkey FOREIGN KEY (subject_id) REFERENCES public.employees(id);
 ALTER TABLE ONLY public.platform_admins
     ADD CONSTRAINT platform_admins_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
 ALTER TABLE ONLY public.policy_acknowledgements
@@ -3957,6 +4213,8 @@ ALTER TABLE public.billing_suspensions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.billing_usage_snapshots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.email_outbox ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.employee_import_jobs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.employee_loan_installments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.employee_loans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.employee_master_details ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.employees ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hr_case_counters ENABLE ROW LEVEL SECURITY;
@@ -4003,6 +4261,10 @@ ALTER TABLE public.payroll_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payroll_ytd_monthly ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payroll_ytd_opening ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payslips ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.perf_cycles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.perf_goals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.perf_participants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.perf_reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.privacy_erasure_runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.privacy_exports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.privacy_settings ENABLE ROW LEVEL SECURITY;
@@ -4052,6 +4314,8 @@ CREATE POLICY tenant_isolation ON public.audit_log USING ((organization_id = (NU
 CREATE POLICY tenant_isolation ON public.auth_invites USING ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid)) WITH CHECK ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid));
 CREATE POLICY tenant_isolation ON public.email_outbox USING ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid)) WITH CHECK ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid));
 CREATE POLICY tenant_isolation ON public.employee_import_jobs USING ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid)) WITH CHECK ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid));
+CREATE POLICY tenant_isolation ON public.employee_loan_installments USING ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid)) WITH CHECK ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid));
+CREATE POLICY tenant_isolation ON public.employee_loans USING ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid)) WITH CHECK ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid));
 CREATE POLICY tenant_isolation ON public.employee_master_details USING ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid)) WITH CHECK ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid));
 CREATE POLICY tenant_isolation ON public.employees USING ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid)) WITH CHECK ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid));
 CREATE POLICY tenant_isolation ON public.hr_case_counters USING ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid)) WITH CHECK ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid));
@@ -4098,6 +4362,10 @@ CREATE POLICY tenant_isolation ON public.payroll_settings USING ((organization_i
 CREATE POLICY tenant_isolation ON public.payroll_ytd_monthly USING ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid)) WITH CHECK ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid));
 CREATE POLICY tenant_isolation ON public.payroll_ytd_opening USING ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid)) WITH CHECK ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid));
 CREATE POLICY tenant_isolation ON public.payslips USING ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid)) WITH CHECK ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid));
+CREATE POLICY tenant_isolation ON public.perf_cycles USING ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid)) WITH CHECK ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid));
+CREATE POLICY tenant_isolation ON public.perf_goals USING ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid)) WITH CHECK ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid));
+CREATE POLICY tenant_isolation ON public.perf_participants USING ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid)) WITH CHECK ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid));
+CREATE POLICY tenant_isolation ON public.perf_reviews USING ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid)) WITH CHECK ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid));
 CREATE POLICY tenant_isolation ON public.privacy_erasure_runs USING ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid)) WITH CHECK ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid));
 CREATE POLICY tenant_isolation ON public.privacy_exports USING ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid)) WITH CHECK ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid));
 CREATE POLICY tenant_isolation ON public.privacy_settings USING ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid)) WITH CHECK ((organization_id = (NULLIF(current_setting('app.organization_id'::text, true), ''::text))::uuid));
@@ -4162,6 +4430,8 @@ GRANT SELECT,USAGE ON SEQUENCE public.billing_events_id_seq TO hrm_runtime;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.email_outbox TO hrm_runtime;
 GRANT SELECT,USAGE ON SEQUENCE public.email_outbox_id_seq TO hrm_runtime;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.employee_import_jobs TO hrm_runtime;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.employee_loan_installments TO hrm_runtime;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.employee_loans TO hrm_runtime;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.employee_master_details TO hrm_runtime;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.employees TO hrm_runtime;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.hr_case_counters TO hrm_runtime;
@@ -4215,6 +4485,10 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.payroll_settings TO hrm_runtim
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.payroll_ytd_monthly TO hrm_runtime;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.payroll_ytd_opening TO hrm_runtime;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.payslips TO hrm_runtime;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.perf_cycles TO hrm_runtime;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.perf_goals TO hrm_runtime;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.perf_participants TO hrm_runtime;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.perf_reviews TO hrm_runtime;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.privacy_erasure_runs TO hrm_runtime;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.privacy_exports TO hrm_runtime;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.privacy_settings TO hrm_runtime;

@@ -172,9 +172,9 @@ export class RiskService {
         ((row.evidence?.columns || []) as EvidenceColumn[]).filter((column) => column.kind === "person").map((column) => cell[column.key]).filter((value): value is string => typeof value === "string"))];
       const directory = await this.people(client, identity.organizationId, personIds);
       const events = (await client.query(
-        `SELECT e.action, e.from_status, e.to_status, e.note, e.created_at, coalesce(u.full_name, 'Northstar automation') AS actor, e.actor_user_id IS NULL AS automated
+        `SELECT e.action, e.from_status, e.to_status, e.note, e.created_at, coalesce(u.full_name, 'ClanChief automation') AS actor, e.actor_user_id IS NULL AS automated
            FROM risk_signal_events e LEFT JOIN users u ON u.id=e.actor_user_id WHERE e.organization_id=$1 AND e.signal_id=$2 ORDER BY e.created_at, e.id`, [identity.organizationId, id])).rows;
-      return { ...this.present(row, directory, viewer, true), events: events.map((event) => ({ ...event, actor: event.automated ? "Northstar automation" : event.actor })) };
+      return { ...this.present(row, directory, viewer, true), events: events.map((event) => ({ ...event, actor: event.automated ? "ClanChief automation" : event.actor })) };
     });
   }
 

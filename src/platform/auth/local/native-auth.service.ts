@@ -75,7 +75,7 @@ export class NativeAuthService implements OnModuleInit, OnModuleDestroy {
 
   /** Cookie-authenticated endpoints accept browser calls only from the app's own origins (CSRF defence in depth). */
   assertOrigin(origin?: string) {
-    if (origin && !this.allowedOrigin(origin)) throw new ForbiddenException("This request did not come from a Northstar page.");
+    if (origin && !this.allowedOrigin(origin)) throw new ForbiddenException("This request did not come from a ClanChief page.");
   }
 
   // ---- public configuration ------------------------------------------------------------------------------------------
@@ -166,7 +166,7 @@ export class NativeAuthService implements OnModuleInit, OnModuleDestroy {
       [user.id, tokenHash(raw), brand?.id || null, Math.max(minutes, 60)]);
     const link = brandWebUrl(brand?.slug || null, `/reset-password?unlock=${encodeURIComponent(raw)}`);
     await this.mailer.send(brand?.id || null, user.email, "Sign-in to your account was paused",
-      paragraphs(`Hi ${user.full_name},`, `We paused sign-in to your Northstar account after several failed attempts. It unlocks automatically in ${minutes} minutes.`,
+      paragraphs(`Hi ${user.full_name},`, `We paused sign-in to your ClanChief account after several failed attempts. It unlocks automatically in ${minutes} minutes.`,
         "If this was you, use the button below to unlock it now. If it wasn't you, unlock it and then reset your password.")
       + emailButton("Unlock my account", link) + paragraphs("This link works once and expires in an hour."));
   }
@@ -326,7 +326,7 @@ export class NativeAuthService implements OnModuleInit, OnModuleDestroy {
       return { user: challenge.user, organizationId: challenge.context.organization?.id || null, code };
     });
     await this.mailer.send(sent.organizationId, sent.user.email, `Your sign-in code is ${sent.code}`,
-      paragraphs(`Hi ${sent.user.full_name},`, `Your Northstar sign-in code is: ${sent.code}`, "It expires in 10 minutes. If you didn't try to sign in, change your password — someone may know it."));
+      paragraphs(`Hi ${sent.user.full_name},`, `Your ClanChief sign-in code is: ${sent.code}`, "It expires in 10 minutes. If you didn't try to sign in, change your password — someone may know it."));
     return { body: { sent: true, email: maskEmail(sent.user.email) } };
   }
 
@@ -562,7 +562,7 @@ export class NativeAuthService implements OnModuleInit, OnModuleDestroy {
     await recordAuthEvent(this.database, { event: "password_changed", success: true, userId: user.id, ip: info.ip, userAgent: info.userAgent });
     const brand = await this.mailBrand(user.id, identity.organizationId || null);
     await this.mailer.send(brand?.id || null, user.email, "Your password was changed",
-      paragraphs(`Hi ${user.full_name},`, "The password for your Northstar account was just changed, and your other devices were signed out.",
+      paragraphs(`Hi ${user.full_name},`, "The password for your ClanChief account was just changed, and your other devices were signed out.",
         "If this wasn't you, reset your password straight away and tell your HR team.")).catch(() => undefined);
     return { changed: true, otherSessionsRevoked: revoked };
   }
@@ -669,8 +669,8 @@ export class NativeAuthService implements OnModuleInit, OnModuleDestroy {
       [user.id, tokenHash(raw), brand?.id || null, RESET_MINUTES]);
     const isPlatform = target.kind === "platform" || !brand;
     const link = brandWebUrl(isPlatform ? null : brand!.slug, `/reset-password?token=${encodeURIComponent(raw)}${isPlatform ? "&admin=1" : ""}`);
-    await this.mailer.send(isPlatform ? null : brand!.id, user.email, "Reset your Northstar password",
-      paragraphs(`Hi ${user.full_name},`, "We received a request to reset the password for your Northstar account.")
+    await this.mailer.send(isPlatform ? null : brand!.id, user.email, "Reset your ClanChief password",
+      paragraphs(`Hi ${user.full_name},`, "We received a request to reset the password for your ClanChief account.")
       + emailButton("Choose a new password", link)
       + paragraphs(`The link works once and expires in ${RESET_MINUTES} minutes. Resetting signs you out on every device.`, "If you didn't ask for this, you can ignore this email — your password stays the same."));
     await recordAuthEvent(this.database, { event: "password_reset_requested", success: true, userId: user.id, ip: info.ip, userAgent: info.userAgent });
@@ -694,7 +694,7 @@ export class NativeAuthService implements OnModuleInit, OnModuleDestroy {
     await recordAuthEvent(this.database, { event: "password_reset", success: true, userId: user.id, ip: info.ip, userAgent: info.userAgent });
     const brand = await this.mailBrand(user.id, null);
     await this.mailer.send(brand?.id || null, user.email, "Your password was reset",
-      paragraphs(`Hi ${user.full_name},`, "Your Northstar password was just reset and every device was signed out.", "If this wasn't you, contact your HR team immediately.")).catch(() => undefined);
+      paragraphs(`Hi ${user.full_name},`, "Your ClanChief password was just reset and every device was signed out.", "If this wasn't you, contact your HR team immediately.")).catch(() => undefined);
     return { reset: true, sessionsRevoked: revoked };
   }
 
@@ -730,7 +730,7 @@ export class NativeAuthService implements OnModuleInit, OnModuleDestroy {
   async inspectInvite(raw: string, info: ClientInfo) {
     if ((await this.perMinute.hit(`invite-ip:${info.ip}`)).count > 30) throw tooMany();
     const row = await this.loadInvite(this.sys, raw, info.origin);
-    return { email: row.email, fullName: row.full_name, workspace: row.kind === "PLATFORM" ? { slug: "platform", name: "Northstar Platform" } : { slug: row.slug, name: row.brand_name },
+    return { email: row.email, fullName: row.full_name, workspace: row.kind === "PLATFORM" ? { slug: "platform", name: "ClanChief Platform" } : { slug: row.slug, name: row.brand_name },
       passwordRules: { minLength: 12 } };
   }
 

@@ -7,9 +7,9 @@ import type { PoolClient } from "pg";
  *   payroll_ytd_opening  one row per (organization_id, employee_id, fiscal_year "2026-27"): totals the old system paid
  *                        for months from_period … last_paid_period (inclusive), `months` = number of months covered.
  *                        taxable = gross − exempt_allowances (HRA is included; the annual HRA exemption is computed
- *                        by Northstar). pf_employee excludes VPF (separate column).
+ *                        by ClanChief). pf_employee excludes VPF (separate column).
  *   payroll_ytd_monthly  optional month-wise rows (organization_id, employee_id, period "YYYY-MM") stored as given.
- * Northstar payroll runs for periods AFTER last_paid_period add these totals to their own published year-to-date
+ * ClanChief payroll runs for periods AFTER last_paid_period add these totals to their own published year-to-date
  * (TDS projection: prior taxable / TDS / PF / PT). Rows exist only while their import batch is committed (undo deletes them).
  */
 export type OpeningYtd = {

@@ -526,7 +526,7 @@ export class OnboardingService implements OnModuleInit {
     if (row.buddy_id)
       await this.notify(client, identity, row.buddy_id, "ONBOARDING_JOINED", row.id, `${firstName} joined today — say hello and take them for their welcome coffee`);
     const html = `<p>Hi ${escapeHtml(firstName)},</p><p>${escapeHtml(settings.welcome_message)}</p>
-      <p>Your employee ID is <b>${escapeHtml(employeeNumber)}</b> and your work email is <b>${escapeHtml(workEmail)}</b>. Sign in to Northstar and open <b>Welcome</b> to see your first-week plan.</p>`;
+      <p>Your employee ID is <b>${escapeHtml(employeeNumber)}</b> and your work email is <b>${escapeHtml(workEmail)}</b>. Sign in to ClanChief and open <b>Welcome</b> to see your first-week plan.</p>`;
     for (const recipient of new Set([row.personal_email, workEmail]))
       await client.query(`INSERT INTO email_outbox(organization_id,recipient,subject,html) VALUES($1,$2,$3,$4)`, [identity.organizationId, recipient, headerSafe(`Welcome to the team, ${firstName}!`), html]);
     await this.audit(client, identity, "ONBOARDING_CONVERTED", ENTITY, row.id, { status: row.status },

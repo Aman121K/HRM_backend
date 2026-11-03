@@ -1,4 +1,4 @@
-# Northstar HRM — reference production stack (UNTESTED here: Docker is not installed on the build machine; validated for
+# ClanChief — reference production stack (UNTESTED here: Docker is not installed on the build machine; validated for
 # YAML syntax only). Postgres is EXTERNAL (Amazon RDS for PostgreSQL 16) and files go to EXTERNAL S3; Redis is included
 # for single-host deployments — on AWS use ElastiCache (TLS + AUTH) and delete the redis service.
 #

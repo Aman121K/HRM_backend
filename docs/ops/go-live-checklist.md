@@ -60,7 +60,7 @@ refuses to start for several of them anyway.
       invited from `/platform` (no single point of failure); break-glass procedure documented.
 - [ ] Field-encryption keys set (`DATA_ENCRYPTION_KEYS`, `DATA_ENCRYPTION_ACTIVE_KEY`, `DATA_INDEX_KEY`) and **backed up
       in two places** (Secrets Manager + offline escrow with the CTO). Losing them = losing PAN/UAN/bank data.
-- [ ] Customer DPAs signed (Northstar = processor; breach notice to customer within 24 h — see incident-response.md);
+- [ ] Customer DPAs signed (ClanChief = processor; breach notice to customer within 24 h — see incident-response.md);
       privacy notice and grievance officer contact published in the app.
 
 ## 5. Release & smoke tests

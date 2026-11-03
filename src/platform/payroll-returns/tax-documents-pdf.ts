@@ -84,7 +84,7 @@ function notes(doc: PdfDocument, data: Form16Data, extra: string[] = []) {
   section(doc, "Notes");
   for (const text of [...extra, ...data.warnings]) doc.paragraph(`* ${text}`, { size: 7.8, color: WARN, gap: 1 });
   doc.paragraph(`* ${data.forms.note}`, { size: 7.5, color: MUTED, gap: 1 });
-  doc.paragraph("* Prepared from payroll records by Northstar HRM. Validate with your tax adviser before relying on it; the certificate is valid only when verified and signed by the person responsible for deduction.", { size: 7.5, color: MUTED, gap: 1 });
+  doc.paragraph("* Prepared from payroll records by ClanChief. Validate with your tax adviser before relying on it; the certificate is valid only when verified and signed by the person responsible for deduction.", { size: 7.5, color: MUTED, gap: 1 });
 }
 
 function verification(doc: PdfDocument, data: Form16Data, what: string) {
@@ -145,7 +145,7 @@ export function renderCertificatePdf(data: Form16Data, pan: string, partA?: Atta
   quarterSection(doc, data);
   verification(doc, data, `${f.certificate}${f.certificate !== f.certificateOld ? ` / ${f.certificateOld}` : ""}`);
   notes(doc, data, partA ? [`The TRACES-issued part (Part A) is attached to this PDF as "${partA.name}" (open the attachments panel) and is also downloadable separately; it is attached unchanged so its digital signature stays valid.`]
-    : ["Part A (from TRACES) has not been attached yet - download it from TRACES and upload it in Northstar HRM."]);
+    : ["Part A (from TRACES) has not been attached yet - download it from TRACES and upload it in ClanChief."]);
   return doc.toBuffer({ footer: footer(`${f.certificate} ${data.fyLabel} · ${data.employee.number}`), attachments: partA ? [partA] : [] });
 }
 

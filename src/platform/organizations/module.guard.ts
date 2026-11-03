@@ -9,7 +9,7 @@ import { OrganizationsService } from "./organizations.service";
 const PREFIXES: [string, string][] = [
   ["/api/v2/payroll", "payroll"], ["/api/v2/roster", "roster"], ["/api/v2/lms", "learning"], ["/api/v2/engagement", "engagement"],
   ["/api/v2/onboarding", "onboarding"], ["/api/v2/analytics", "reports"], ["/api/v2/integrations", "integrations"], ["/api/v2/receipts", "expenses"],
-  ["/api/v2/attendance", "attendance"], ["/api/v2/leaves", "leave"], ["/api/v2/leave-types", "leave"], ["/api/v2/approvals/leaves", "leave"],
+  ["/api/v2/attendance", "attendance"], ["/api/v2/loans", "payroll"], ["/api/v2/performance", "performance"], ["/api/v2/leaves", "leave"], ["/api/v2/leave-types", "leave"], ["/api/v2/approvals/leaves", "leave"],
 ];
 /** Case-engine modules → organization module key (also enforced per case in CasesService for routes addressed by id). */
 export const CASE_MODULES: Record<string, string> = {

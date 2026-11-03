@@ -19,6 +19,7 @@ import { ANNEXURE_II_HEADER, annexureIIRow, computeForm16, type Form16Data, type
 import { loadOpeningMonths, loadOpeningYtd } from "./opening-ytd";
 import { renderCertificatePdf, renderPerquisitesPdf, renderTdsSummaryPdf } from "./tax-documents-pdf";
 import { PdfDocument } from "./pdf";
+import { buildZip } from "./zip";
 import type { ChallanDto, DeductorDto, PartAUploadDto, QuarterFilingDto, UpdateChallanDto } from "./returns.dto";
 import {
   QUARTERS, certificateDueDate, depositDueDate, formNames, fyLabel, fyPeriods, inr, lateDepositInterest, quarterOfPeriod, quarterPeriods, quarterRange,
@@ -679,6 +680,28 @@ export class ReturnsService implements OnModuleInit {
     }
     if (kind === "perquisites") return { bytes: renderPerquisitesPdf(data, loaded.pan), name: `${data.fyStart >= 2026 ? "Form130-AnnexureII-Perquisites" : "Form12BA"}_${base}.pdf`, type: "application/pdf" };
     return { bytes: renderTdsSummaryPdf(data, loaded.pan, (loaded as any).months || []), name: `TDS-summary_${base}.pdf`, type: "application/pdf" };
+  }
+
+  /** Every generated certificate (and perquisite statement) for the year in one ZIP, for printing or a document portal. */
+  async bulkDocuments(identity: AuthIdentity, fyStart: number) {
+    requireAdmin(identity);
+    const ids = await this.database.tenantTransaction(identity, async (client) => {
+      const rows = (await client.query(
+        `SELECT d.employee_id FROM tax_documents d JOIN employees e ON e.id=d.employee_id AND e.organization_id=d.organization_id
+          WHERE d.organization_id=$1 AND d.fy_start=$2 AND d.generated_at IS NOT NULL ORDER BY e.employee_number`, [identity.organizationId, fyStart])).rows;
+      if (!rows.length) throw new NotFoundException("No certificates have been generated for this year yet.");
+      const set = (await client.query(`SELECT id FROM tax_document_sets WHERE organization_id=$1 AND fy_start=$2`, [identity.organizationId, fyStart])).rows[0];
+      if (set) await auditRead(client, identity, "TAX_DOCUMENTS_BULK_DOWNLOADED", "tax_document_set", set.id, { fy: fyStart, employees: rows.length });
+      return rows.map((row) => row.employee_id as string);
+    });
+    const entries: { name: string; bytes: Buffer }[] = [];
+    for (const employeeId of ids) {
+      for (const kind of ["certificate", "perquisites"]) {
+        const file = await this.document(identity, fyStart, employeeId, kind);
+        entries.push({ name: file.name, bytes: file.bytes });
+      }
+    }
+    return { bytes: buildZip(entries), name: `${formNames(fyStart).certificate.replace(/\s+/g, "")}_${fyLabel(fyStart)}_all-employees.zip`, type: "application/zip", count: ids.length };
   }
 
   /** Employee: published tax documents per year. */

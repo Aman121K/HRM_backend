@@ -195,7 +195,7 @@ async function composition(ctx: Ctx): Promise<ReportBody> {
       { id: "roles", type: "bar", horizontal: true, title: "Most common roles", format: "number", categories: designations.slice(0, 10).map((row) => row.label), series: [{ name: "People", values: designations.slice(0, 10).map((row) => row.headcount) }] },
       genderSafe
         ? { id: "gender", type: "donut", title: "Gender", format: "number", slices: genderSafe.filter((row) => row.people !== null).map((row) => ({ label: row.label, value: num(row.people) })) }
-        : { id: "gender", type: "empty", title: "Gender", format: "number", message: "Gender is not captured on the employee record, so no split is shown. Northstar never infers it from names." },
+        : { id: "gender", type: "empty", title: "Gender", format: "number", message: "Gender is not captured on the employee record, so no split is shown. ClanChief never infers it from names." },
     ],
     table: {
       title: "Headcount by location",

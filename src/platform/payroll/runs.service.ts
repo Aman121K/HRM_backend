@@ -12,6 +12,7 @@ import { DISCLAIMER, addMonths, rulesetFor, esiContributionPeriod, lopDaysInPeri
 import { calculateLine, type RunInput } from "./engine";
 import { plainField, toCsv } from "./csv";
 import { loadOpeningYtd, openingNet } from "../imports/ytd.shared"; // switch-over import
+import { LoansService } from "../loans/loans.service";
 
 type RunRow = Record<string, any>;
 const EDITABLE = ["DRAFT", "CALCULATED"];
@@ -154,6 +155,7 @@ export class RunsService {
     const org = identity.organizationId;
     const p = parsePeriod(run.period);
     const expensesAdded = run.include_expenses ? await this.syncExpenses(client, identity, run, p.lastDay) : 0;
+    await LoansService.syncIntoRun(client, org, run.id, run.period, identity.employeeId);
 
     // Owners who have never had a salary structure (e.g. a group owner added to a brand to administer it) are not on
     // this brand's payroll, so they are left out instead of showing up as a "missing structure" error every month.
@@ -440,6 +442,7 @@ export class RunsService {
           to = "PUBLISHED"; set.push("published_at=now()", `published_by=${me()}`);
           const lines = (await client.query(`SELECT employee_id FROM payroll_run_lines WHERE organization_id=$1 AND run_id=$2 AND status='INCLUDED' AND NOT held`, [org, id])).rows;
           for (const line of lines) await this.publishLine(client, identity, run, line.employee_id);
+          await LoansService.markRecovered(client, org, id);
           break;
         }
         case "lock":
@@ -568,6 +571,25 @@ export class RunsService {
           rows.push([], ["Summary by state", "Employees", "", "Gross salary", "Professional tax"]);
           for (const agg of byState.values()) rows.push([agg.name, agg.employees, "", agg.gross, agg.pt]);
           return { body: toCsv(rows), name: `professional-tax-${tag}.csv`, type: "text/csv", rows: paid.length, total: paid.reduce((t, line) => t + num(line.pt), 0) };
+        }
+        case "lwf": {
+          // Labour Welfare Fund remittance: only states whose deduction month this is, and only when LWF is enabled.
+          const rows: unknown[][] = [["State", "Employee ID", "Name", "Gross salary", "Employee LWF", "Employer LWF", "Total"]];
+          const byState = new Map<string, { name: string; employees: number; employee: number; employer: number }>();
+          let n = 0;
+          for (const line of paid) {
+            const lwf = s(line).lwf;
+            if (!lwf?.enabled || !(num(lwf.employee) || num(lwf.employer))) continue;
+            const stateName = s(line).pt?.stateName || lwf.state || "";
+            rows.push([stateName, line.employee_number, line.full_name, num(line.gross), num(lwf.employee), num(lwf.employer), num(lwf.employee) + num(lwf.employer)]);
+            const agg = byState.get(lwf.state) || { name: stateName, employees: 0, employee: 0, employer: 0 };
+            agg.employees += 1; agg.employee += num(lwf.employee); agg.employer += num(lwf.employer);
+            byState.set(lwf.state, agg); n += 1;
+          }
+          rows.push([], ["Summary by state", "Employees", "", "", "Employee LWF", "Employer LWF", "Total"]);
+          for (const agg of byState.values()) rows.push([agg.name, agg.employees, "", "", agg.employee, agg.employer, agg.employee + agg.employer]);
+          const total = [...byState.values()].reduce((t, agg) => t + agg.employee + agg.employer, 0);
+          return { body: toCsv(rows), name: `labour-welfare-fund-${tag}.csv`, type: "text/csv", rows: n, total };
         }
         case "register": {
           const rows: unknown[][] = [["Employee ID", "Name", "Department", "Location", "PT state", "Status", "Days in month", "LOP days", "Payable days",

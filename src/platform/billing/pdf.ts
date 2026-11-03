@@ -95,7 +95,7 @@ export class PdfDocument {
     }
     objects[catalog - 1] = `<< /Type /Catalog /Pages ${pagesId} 0 R >>`;
     objects[pagesId - 1] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageIds.length} >>`;
-    const infoId = add(`<< /Title ${pdfString(this.info.title)} /Author ${pdfString(this.info.author || "Northstar")} /Producer (Northstar billing) >>`);
+    const infoId = add(`<< /Title ${pdfString(this.info.title)} /Author ${pdfString(this.info.author || "ClanChief")} /Producer (ClanChief billing) >>`);
 
     let out = "%PDF-1.4\n%\xe2\xe3\xcf\xd3\n";
     const offsets: number[] = [];

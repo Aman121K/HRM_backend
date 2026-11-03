@@ -1,4 +1,4 @@
-# Deploying Northstar HRM on AWS (Mumbai, ap-south-1)
+# Deploying ClanChief on AWS (Mumbai, ap-south-1)
 
 Audience: the engineer doing the first production install. Every step lists what to do and how to check it.
 Companion runbooks: [go-live-checklist.md](go-live-checklist.md), [backup-restore.md](backup-restore.md),
@@ -121,7 +121,7 @@ so S3 answers 404 (without it S3 answers 403 and readiness reports `storage: htt
 3. Request production access (leave the sandbox) — state transactional HR mail only, expected volume.
 4. Create SMTP credentials for a dedicated IAM user limited to `ses:SendRawEmail` with a `ses:FromAddress` condition;
    store in Secrets Manager. Env: `SMTP_HOST=email-smtp.ap-south-1.amazonaws.com`, `SMTP_PORT=587`, `SMTP_SECURE=false`
-   (STARTTLS), `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM="Northstar People <no-reply@people.example.in>"`.
+   (STARTTLS), `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM="ClanChief <no-reply@people.example.in>"`.
 5. Configuration set with bounce/complaint → SNS → (email to ops) so bad addresses are noticed.
 
 ## 6. Secrets — Secrets Manager + KMS
