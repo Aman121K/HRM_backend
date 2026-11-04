@@ -1,0 +1,36 @@
+# TLS: Cloudflare Origin Certificate covering {$APP_DOMAIN} and *.{$APP_DOMAIN} (Cloudflare SSL mode "Full (strict)").
+# Put origin.pem + origin.key in deploy/single-server/certs/ (git-ignored). Only Cloudflare may reach ports 80/443
+# (EC2 security group), so CF-Connecting-IP is the real client address the API rate-limits and audits on.
+{
+	auto_https off
+	admin off
+}
+
+(proxy_headers) {
+	header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+	header_up X-Real-IP {http.request.header.CF-Connecting-IP}
+}
+
+:80 {
+	redir https://{host}{uri} permanent
+}
+
+api.{$APP_DOMAIN}:443 {
+	tls /certs/origin.pem /certs/origin.key
+	encode zstd gzip
+	request_body {
+		max_size 25MB
+	}
+	reverse_proxy api:4100 {
+		import proxy_headers
+	}
+}
+
+# Main app (workspace finder, super admin) and every brand subdomain. The bare domain and www stay on the website.
+app.{$APP_DOMAIN}:443, *.{$APP_DOMAIN}:443 {
+	tls /certs/origin.pem /certs/origin.key
+	encode zstd gzip
+	reverse_proxy web:3000 {
+		import proxy_headers
+	}
+}

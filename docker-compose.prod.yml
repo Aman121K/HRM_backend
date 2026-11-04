@@ -122,6 +122,7 @@ services:
       args:
         NEXT_PUBLIC_PLATFORM_API_URL: ${NEXT_PUBLIC_PLATFORM_API_URL:?e.g. https://api.people.example.in}
         NEXT_PUBLIC_APP_DOMAIN: ${NEXT_PUBLIC_APP_DOMAIN:?e.g. people.example.in}
+        NEXT_PUBLIC_APP_MAIN_HOST: ${NEXT_PUBLIC_APP_MAIN_HOST:-}
         NEXT_PUBLIC_OIDC_ISSUER: ${NEXT_PUBLIC_OIDC_ISSUER:-}
         APP_VERSION: "${APP_VERSION:-0.0.0}"
         GIT_SHA: "${GIT_SHA:-}"
