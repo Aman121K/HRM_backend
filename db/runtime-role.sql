@@ -18,5 +18,7 @@ DO $$ BEGIN
     CREATE ROLE hrm_runtime LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOINHERIT;
   END IF;
 END $$;
-ALTER ROLE hrm_runtime WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOINHERIT;
+-- No NOSUPERUSER here: managed Postgres (RDS) refuses to touch the SUPERUSER attribute unless you are a superuser,
+-- and a role can only gain it from a superuser anyway. CREATE ROLE above still sets it explicitly.
+ALTER ROLE hrm_runtime WITH LOGIN NOCREATEDB NOCREATEROLE NOBYPASSRLS NOINHERIT;
 ALTER ROLE hrm_runtime SET statement_timeout = '15s';

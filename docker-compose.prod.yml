@@ -105,7 +105,8 @@ services:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4190/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      # node:http, not fetch: 4190 is on the WHATWG fetch "bad ports" list, so fetch() refuses it outright.
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:4190/health/ready',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       start_period: 45s
@@ -139,6 +140,8 @@ services:
   redis:
     image: redis:7.4-alpine
     <<: *hardening
+    # Run as the image's redis user directly: with cap_drop ALL the entrypoint cannot switch users itself (setpriv fails).
+    user: "999:1000"
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD and put it in REDIS_URL}", "--maxmemory-policy", "noeviction"]
     volumes: ["redis-data:/data"]
     healthcheck:
