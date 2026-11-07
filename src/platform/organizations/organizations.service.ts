@@ -102,8 +102,8 @@ export class OrganizationsService {
   }
 
   /**
-   * Provisions a new brand: organization, statutory defaults, the first HR admin (user + membership + employee record) and,
-   * optionally, the platform admin as OWNER. Everything happens in one transaction.
+   * Provisions a new brand: organization, statutory defaults, the brand admin (OWNER: user + membership + employee record) and,
+   * only when asked (addMeAsOwner: true), the platform admin as a second OWNER. Everything happens in one transaction.
    */
   async createOrganization(identity: AuthIdentity, input: CreateOrganizationDto) {
     await this.requirePlatformAdmin(identity);
@@ -122,8 +122,8 @@ export class OrganizationsService {
       for (const [code, name, quota, doc] of DEFAULT_LEAVE_TYPES)
         await client.query(`INSERT INTO leave_types(organization_id,code,name,annual_quota,requires_document_after_days) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`, [org.id, code, name, quota, doc]);
       await client.query(`INSERT INTO attendance_policies(organization_id,selfie_mode) VALUES($1,'OUTSIDE_GEOFENCE') ON CONFLICT DO NOTHING`, [org.id]);
-      const admin = await this.addMember(client, org.id, input.employeePrefix, 1, input.admin.fullName, input.admin.workEmail.toLowerCase(), input.admin.designation || "HR Administrator", "HR_ADMIN");
-      if (input.addMeAsOwner !== false) {
+      const admin = await this.addMember(client, org.id, input.employeePrefix, 1, input.admin.fullName, input.admin.workEmail.toLowerCase(), input.admin.designation || "HR Administrator", "OWNER");
+      if (input.addMeAsOwner === true) {
         const me = (await client.query(`SELECT u.email, u.full_name FROM users u WHERE u.id=$1`, [identity.userId])).rows[0];
         if (me && me.email.toLowerCase() !== input.admin.workEmail.toLowerCase()) await this.addMember(client, org.id, input.employeePrefix, 0, me.full_name, me.email, "Group Owner", "OWNER", identity.userId);
       }
