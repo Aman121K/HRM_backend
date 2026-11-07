@@ -6,8 +6,12 @@ import { computeEffective, type CustomAssignmentRow, type Effective } from "../a
 import type { AuthIdentity } from "./auth.types";
 import { localTokenKeys, type LocalClaims } from "./local/signing-keys";
 
-/** Roles that may only be used from a session that passed MFA. */
-export const MFA_ROLES = ["OWNER", "HR_ADMIN", "PAYROLL_ADMIN"];
+/**
+ * Brand roles that may only be used from a session that passed MFA. Empty on purpose: two-step verification is optional
+ * for HR and team members (each brand can still force it for everyone via its auth policy, mfa_required_all).
+ * Platform admins always need MFA — that is enforced separately (native-auth eligibility + PLATFORM_ADMIN checks).
+ */
+export const MFA_ROLES: string[] = [];
 const SESSION_CACHE_TTL_MS = 15_000;
 const INVALID_SESSION = "Your session has expired or the token is invalid. Please sign in again.";
 
