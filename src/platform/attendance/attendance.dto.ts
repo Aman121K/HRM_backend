@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateNested } from "class-validator";
+import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsDefined, IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateNested } from "class-validator";
 
 export class PunchLocationDto {
   @Type(() => Number) @IsNumber() @Min(-90) @Max(90) latitude!: number;
@@ -51,7 +51,7 @@ export class PrecheckDto extends PunchLocationDto {
 
 export class PunchDto {
   @IsIn(["IN", "OUT"]) type!: "IN" | "OUT";
-  @ValidateNested() @Type(() => PunchLocationDto) location!: PunchLocationDto;
+  @IsDefined({ message: "location is required to punch" }) @ValidateNested() @Type(() => PunchLocationDto) location!: PunchLocationDto;
   @IsOptional() @IsIn(["WEB", "MOBILE"]) source?: "WEB" | "MOBILE";
   @IsOptional() @IsString() @MaxLength(120) deviceId?: string;
   @IsOptional() @IsString() @MaxLength(60) timezone?: string;

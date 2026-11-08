@@ -40,6 +40,25 @@ export class LeaveService {
         `SELECT id,name FROM leave_types WHERE organization_id=$1 AND id=$2 AND active=true`,
         [identity.organizationId, input.leaveTypeId])).rows[0];
       if (!leaveType) throw new BadRequestException("The selected leave type is not available for this organization.");
+      const span = Math.round((Date.parse(input.endDate) - Date.parse(input.startDate)) / 86_400_000) + 1;
+      if (input.days > span) throw new BadRequestException(`${input.days} day(s) don't fit between ${input.startDate} and ${input.endDate}.`);
+      // Balance check: imported opening balance (switch-over) when there is one, otherwise the annual quota for the year.
+      // Pending requests count as already used, so two requests can't both spend the same days. Loss of pay is never capped.
+      const available = (await client.query(
+        `SELECT t.code, t.name,
+                CASE WHEN o.id IS NOT NULL THEN
+                  o.days + coalesce((SELECT sum(a.days) FROM leave_balance_ledger a WHERE a.organization_id=t.organization_id AND a.employee_id=$2 AND a.leave_type_id=t.id AND a.entry_type='ADJUSTMENT'),0)
+                    - coalesce((SELECT sum(r.days) FROM leave_requests r WHERE r.organization_id=t.organization_id AND r.employee_id=$2 AND r.leave_type_id=t.id AND r.status IN ('APPROVED','PENDING') AND r.start_date > o.as_of),0)
+                ELSE t.annual_quota
+                    - coalesce((SELECT sum(r.days) FROM leave_requests r WHERE r.organization_id=t.organization_id AND r.employee_id=$2 AND r.leave_type_id=t.id AND r.status IN ('APPROVED','PENDING')
+                                  AND date_trunc('year', r.start_date) = date_trunc('year', $4::date)),0)
+                END::float AS available
+           FROM leave_types t
+           LEFT JOIN leave_balance_ledger o ON o.organization_id=t.organization_id AND o.employee_id=$2 AND o.leave_type_id=t.id AND o.entry_type='OPENING'
+          WHERE t.organization_id=$1 AND t.id=$3`, [identity.organizationId, identity.employeeId, input.leaveTypeId, input.startDate])).rows[0];
+      const unpaid = /LOP|UNPAID/i.test(available.code) || /loss of pay|unpaid/i.test(available.name);
+      if (!unpaid && available.available !== null && input.days > available.available)
+        throw new BadRequestException(`Only ${Math.max(0, available.available)} day(s) of ${leaveType.name} left (pending requests included). Apply for fewer days or use Loss of Pay.`);
       const overlap = await client.query(
         `SELECT 1 FROM leave_requests WHERE organization_id=$1 AND employee_id=$2
           AND status IN ('PENDING','APPROVED') AND daterange(start_date,end_date,'[]') && daterange($3::date,$4::date,'[]')`,
@@ -85,14 +104,18 @@ export class LeaveService {
     });
   }
 
+  /** HR admins and owners see and can decide every pending leave in the brand (e.g. when a manager is away), never their own. */
+  private isHr(identity: AuthIdentity) { return identity.roles.some((role) => role === "HR_ADMIN" || role === "OWNER"); }
+
   approvalQueue(identity: AuthIdentity) {
     return this.database.tenantTransaction(identity, async (client) => ({ items: (await client.query(
       `SELECT l.id,'LEAVE' type,l.status,l.submitted_at,e.full_name employee,t.name title,
               concat(l.days,' day(s) · ',to_char(l.start_date,'YYYY-MM-DD'),' to ',to_char(l.end_date,'YYYY-MM-DD'),' · ',l.reason) detail
          FROM leave_requests l JOIN employees e ON e.id=l.employee_id AND e.organization_id=l.organization_id
          JOIN leave_types t ON t.id=l.leave_type_id AND t.organization_id=l.organization_id
-        WHERE l.organization_id=$1 AND l.approver_id=$2 AND l.status='PENDING' ORDER BY l.submitted_at`,
-      [identity.organizationId, identity.employeeId])).rows }));
+        WHERE l.organization_id=$1 AND l.status='PENDING'
+          AND (l.approver_id=$2 OR ($3 AND l.employee_id IS DISTINCT FROM $2)) ORDER BY l.submitted_at`,
+      [identity.organizationId, identity.employeeId, this.isHr(identity)])).rows }));
   }
 
   async decide(identity: AuthIdentity, id: string, input: LeaveDecisionDto) {
@@ -100,8 +123,9 @@ export class LeaveService {
     const row = await this.database.tenantTransaction(identity, async (client) => {
       const result = await client.query(
         `UPDATE leave_requests SET status=$1,decision_note=$2,decided_at=now(),updated_at=now(),version=version+1
-          WHERE organization_id=$3 AND id=$4 AND approver_id=$5 AND status='PENDING' RETURNING *`,
-        [input.decision, input.note?.trim() || null, identity.organizationId, id, identity.employeeId]);
+          WHERE organization_id=$3 AND id=$4 AND status='PENDING'
+            AND (approver_id=$5 OR ($6 AND employee_id IS DISTINCT FROM $5)) RETURNING *`,
+        [input.decision, input.note?.trim() || null, identity.organizationId, id, identity.employeeId, this.isHr(identity)]);
       if (!result.rowCount) throw new NotFoundException("Pending approval was not found or was already decided.");
       const decided = result.rows[0];
       const employee = (await client.query(`SELECT work_email,full_name FROM employees WHERE organization_id=$1 AND id=$2`,
