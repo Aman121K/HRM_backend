@@ -4,7 +4,8 @@ import type { AuthIdentity } from "../auth/auth.types";
 import { DatabaseService } from "../database/database.service";
 import { FilesService } from "../files/files.service";
 import { JobsService } from "../jobs/jobs.service";
-import { escapeHtml, headerSafe } from "../jobs/email-layout";
+import { emailButton, escapeHtml, headerSafe } from "../jobs/email-layout";
+import { brandWebUrl } from "../auth/local/auth-mailer";
 import { decryptField, mask, sealField } from "../security/field-crypto";
 import { DEFAULT_TASKS, DEFAULT_TEMPLATE_DESCRIPTION, DEFAULT_TEMPLATE_NAME } from "./onboarding-defaults";
 import type {
@@ -525,8 +526,11 @@ export class OnboardingService implements OnModuleInit {
       await this.notify(client, identity, row.manager_id, "ONBOARDING_JOINED", row.id, `${row.full_name} (${employeeNumber}) has joined your team today`);
     if (row.buddy_id)
       await this.notify(client, identity, row.buddy_id, "ONBOARDING_JOINED", row.id, `${firstName} joined today — say hello and take them for their welcome coffee`);
+    const slug = (await client.query(`SELECT slug FROM organizations WHERE id=$1`, [identity.organizationId])).rows[0]?.slug ?? null;
     const html = `<p>Hi ${escapeHtml(firstName)},</p><p>${escapeHtml(settings.welcome_message)}</p>
-      <p>Your employee ID is <b>${escapeHtml(employeeNumber)}</b> and your work email is <b>${escapeHtml(workEmail)}</b>. Sign in to ClanChief and open <b>Welcome</b> to see your first-week plan.</p>`;
+      <p>Your employee ID is <b>${escapeHtml(employeeNumber)}</b> and your work email is <b>${escapeHtml(workEmail)}</b>.</p>
+      <p><b>How to sign in:</b> we've sent a separate email titled <b>"You're invited to … on ClanChief"</b> to <b>${escapeHtml(workEmail)}</b>. Click <b>Set up my account</b> in it to choose your password (the link works for 72 hours). After that, sign in with your work email and password using the button below, and open <b>Welcome</b> to see your first-week plan.</p>
+      <p>Didn't get it? Ask HR to resend your invite.</p>` + emailButton("Sign in to ClanChief", brandWebUrl(slug, "/login"));
     for (const recipient of new Set([row.personal_email, workEmail]))
       await client.query(`INSERT INTO email_outbox(organization_id,recipient,subject,html) VALUES($1,$2,$3,$4)`, [identity.organizationId, recipient, headerSafe(`Welcome to the team, ${firstName}!`), html]);
     await this.audit(client, identity, "ONBOARDING_CONVERTED", ENTITY, row.id, { status: row.status },
