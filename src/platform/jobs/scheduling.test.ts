@@ -91,7 +91,7 @@ test("console tenant filters", () => {
 
 test("email layout wraps fragments, escapes, and leaves full documents alone", () => {
   const html = renderEmail({ subject: "Hi <there>", html: "<p>Body</p>", organizationName: "Blue & Co" });
-  assert.match(html, /NORTHSTAR/);
+  assert.match(html, /CLANCHIEF/);
   assert.match(html, /Hi &lt;there&gt;/);
   assert.match(html, /Blue &amp; Co/);
   assert.equal(renderEmail({ subject: "x", html: "<html><body>raw</body></html>" }), "<html><body>raw</body></html>");

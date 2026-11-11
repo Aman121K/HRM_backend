@@ -177,6 +177,18 @@ export class LeaveService {
   }
 
   /** HR / owner register: every leave request in the brand (filterable) plus each active employee's paid-leave balances. */
+  /** Colleagues on approved leave today (name, team, leave type, last day) for the home dashboard. No reasons or notes. */
+  onLeaveToday(identity: AuthIdentity) {
+    return this.database.tenantTransaction(identity, async (client) => ({ items: (await client.query(
+      `SELECT e.id AS "employeeId", e.full_name AS name, e.department, e.designation, t.name AS "leaveType",
+              to_char(l.end_date,'YYYY-MM-DD') AS "endDate"
+         FROM leave_requests l
+         JOIN employees e ON e.id=l.employee_id AND e.organization_id=l.organization_id AND e.status='ACTIVE'
+         JOIN leave_types t ON t.id=l.leave_type_id AND t.organization_id=l.organization_id
+        WHERE l.organization_id=$1 AND l.status='APPROVED' AND (now() AT TIME ZONE 'Asia/Kolkata')::date BETWEEN l.start_date AND l.end_date
+        ORDER BY e.full_name LIMIT 50`, [identity.organizationId])).rows }));
+  }
+
   async register(identity: AuthIdentity, filters: { status?: string; month?: string; employeeId?: string }) {
     const status = filters.status && ["PENDING", "APPROVED", "REJECTED", "WITHDRAWN"].includes(filters.status) ? filters.status : null;
     const month = /^\d{4}-\d{2}$/.test(filters.month || "") ? `${filters.month}-01` : null;

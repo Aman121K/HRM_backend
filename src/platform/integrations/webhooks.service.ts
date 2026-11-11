@@ -233,7 +233,7 @@ export class WebhooksService {
       const response = await pinnedPost(target, {
         body, timeoutMs: TIMEOUT_MS, maxBytes: MAX_RESPONSE_BYTES,
         headers: {
-          "content-type": "application/json", "user-agent": "Northstar-Webhooks/1.0",
+          "content-type": "application/json", "user-agent": "ClanChief-Webhooks/1.0",
           "x-northstar-event": attempt.is_test ? "webhook.test" : attempt.event_type, "x-northstar-delivery": deliveryId,
           "x-northstar-timestamp": timestamp, "x-northstar-signature": `v1=${signature}`,
         },

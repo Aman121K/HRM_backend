@@ -10,6 +10,7 @@ export class LeaveController {
   constructor(private readonly leave: LeaveService) {}
   @Get("leave-types") types(@Req() request: FastifyRequest) { return this.leave.listTypes(request.identity!); }
   @Get("leaves") mine(@Req() request: FastifyRequest) { return this.leave.listMine(request.identity!); }
+  @Get("leaves/today") today(@Req() request: FastifyRequest) { return this.leave.onLeaveToday(request.identity!); }
   @Get("leaves/register") @Roles("HR_ADMIN", "OWNER")
   register(@Req() request: FastifyRequest, @Query("status") status?: string, @Query("month") month?: string, @Query("employeeId") employeeId?: string) {
     return this.leave.register(request.identity!, { status, month, employeeId });

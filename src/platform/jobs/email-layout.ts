@@ -45,7 +45,7 @@ export function renderEmail(input: { subject: string; html: string; organization
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f1e8"><tr><td align="center" style="padding:32px 16px">` +
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border:1px solid #e6e0d4">` +
     `<tr><td style="background:#16302b;padding:20px 28px"><span style="display:inline-block;width:10px;height:10px;background:#d7a33b;margin-right:10px"></span>` +
-    `<span style="font:800 15px/1 Manrope,Segoe UI,Arial,sans-serif;color:#ffffff;letter-spacing:.04em">NORTHSTAR</span>` +
+    `<span style="font:800 15px/1 Manrope,Segoe UI,Arial,sans-serif;color:#ffffff;letter-spacing:.04em">CLANCHIEF</span>` +
     `<span style="font:500 13px/1 Manrope,Segoe UI,Arial,sans-serif;color:#b9c9c3;margin-left:10px">${org}</span></td></tr>` +
     `<tr><td style="padding:28px 28px 8px;font:400 15px/1.6 Manrope,Segoe UI,Arial,sans-serif;color:#1d2522">` +
     `<h1 style="margin:0 0 16px;font:800 21px/1.3 Manrope,Segoe UI,Arial,sans-serif;color:#1d2522">${escapeHtml(input.subject)}</h1>${input.html}</td></tr>` +
